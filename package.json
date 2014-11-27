@@ -7,10 +7,11 @@
     "email": "jean.sebastien.cote@gmail.com"
   },
   "dependencies": {
-    "Injector": "^0.0.1",
+    "jsai-injector": "^0.0.2",
     "lodash": "^2.4.1",
     "log4js": "^0.6.21",
-    "q": "^1.1.2"
+    "q": "^1.1.2",
+    "jsai-servicemessage" : "^0.0.2"
   },
   "repository": {
     "type": "git",

@@ -1,7 +1,7 @@
 /**
  * Created by jean-sebastiencote on 11/1/14.
  */
-(function (util, _, q, process, log4js, Injector) {
+(function (util, _, q, process, log4js, Injector, serviceMessage) {
 
     /*
      Expected hierarchy of objects to deal with in the execution of a process. It all starts with a BlockNode, which will
@@ -20,6 +20,8 @@
      |--IteratorNode - has an iterator to loop through until all items are iterated. For each item, the loopBlock will be called, which is a BlockNode
 
      */
+
+    Injector.register({dependency: serviceMessage, name: 'serviceMessage'});
 
     var logger = log4js.getLogger();
 
@@ -755,5 +757,6 @@
     module.require('q'),
     process,
     require('log4js'),
-    require('./node_modules/injector/Injector')
+    require('jsai-injector'),
+    require('jsai-servicemessage')
 );

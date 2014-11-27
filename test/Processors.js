@@ -5,7 +5,7 @@
 var p = require('path');
 var q = require('q');
 var util = require('util');
-Injector = require('../node_modules/injector/Injector');
+Injector = require('jsai-injector');
 //require(p.resolve(__dirname + '../../../server/config/injection'))(p.resolve(__dirname + '../../../server/'));
 
 var Processor = require('../Processor').Processor;
@@ -22,7 +22,7 @@ module.exports = {
         Injector.setBasePath(__dirname);
 
         Injector
-            .register({dependency: '../../serviceMessage', name: 'serviceMessage'})
+            //.register({dependency: '../../serviceMessage', name: 'serviceMessage'})
             .register({dependency: '../../Processor::TaskNode', name: 'TaskNode'})
             .register({dependency: '../../Processor::ConditionNode', name: 'ConditionNode'})
             .register({dependency: '../../Processor::CompensatedNode', name: 'CompensatedNode'})
