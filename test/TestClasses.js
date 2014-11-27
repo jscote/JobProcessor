@@ -4,8 +4,8 @@
 (function (_, q, util, base) {
 
     var p = require('path');
-    var ProcessorLoader = require(p.resolve(__dirname + '../../../server/lib/Processor')).ProcessorLoader;
-    var NodeFactory = require(p.resolve(__dirname + '../../../server/lib/Processor')).NodeFactory;
+    var ProcessorLoader = require('../Processor').ProcessorLoader;
+    var NodeFactory = require('../Processor').NodeFactory;
 
     function TestTaskNode(serviceMessage) {
         base.TaskNode.call(this, serviceMessage);
@@ -364,5 +364,5 @@
     require('lodash'),
     require('q'),
     require('util'),
-    require(Injector.getBasePath() + '/lib/Processor')
+    require(__dirname + '../../Processor')
 );

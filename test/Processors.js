@@ -5,40 +5,54 @@
 var p = require('path');
 var q = require('q');
 var util = require('util');
-require(p.resolve(__dirname + '../../../server/config/injection'))(p.resolve(__dirname + '../../../server/'));
+Injector = require('../node_modules/injector/Injector');
+//require(p.resolve(__dirname + '../../../server/config/injection'))(p.resolve(__dirname + '../../../server/'));
 
-
-var Processor = require(p.resolve(__dirname + '../../../server/lib/Processor')).Processor;
-var ProcessorLoader = require(p.resolve(__dirname + '../../../server/lib/Processor')).ProcessorLoader;
-var NodeFactory = require(p.resolve(__dirname + '../../../server/lib/Processor')).NodeFactory;
-var TaskNode = require(p.resolve(__dirname + '../../../server/lib/Processor')).TaskNode;
-var ConditionNode = require(p.resolve(__dirname + '../../../server/lib/Processor')).ConditionNode;
-var LoopNode = require(p.resolve(__dirname + '../../../server/lib/Processor')).LoopNode;
-
+var Processor = require('../Processor').Processor;
+var ProcessorLoader = require('../Processor').ProcessorLoader;
+var NodeFactory = require('../Processor').NodeFactory;
+var TaskNode = require('../Processor').TaskNode;
+var ConditionNode = require('../Processor').ConditionNode;
+var LoopNode = require('../Processor').LoopNode;
 
 
 module.exports = {
     setUp: function (callback) {
-        /*Injector
-         .register({dependency: '/lib/Processor::TaskNode', name: 'TaskNode'})
-         .register({dependency: '/lib/Processor::ConditionNode', name: 'ConditionNode'})
-         .register({dependency: '/lib/TestClasses::TestTaskNode', name: 'TestTaskNode'})
-         .register({dependency: '/lib/TestClasses::Test2TaskNode', name: 'Test2TaskNode'})
-         .register({dependency: '/lib/TestClasses::Test3TaskNode', name: 'Test3TaskNode'})
-         .register({dependency: '/lib/TestClasses::Test4TaskNode', name: 'Test4TaskNode'});*/
+
+        Injector.setBasePath(__dirname);
+
+        Injector
+            .register({dependency: '../../serviceMessage', name: 'serviceMessage'})
+            .register({dependency: '../../Processor::TaskNode', name: 'TaskNode'})
+            .register({dependency: '../../Processor::ConditionNode', name: 'ConditionNode'})
+            .register({dependency: '../../Processor::CompensatedNode', name: 'CompensatedNode'})
+            .register({dependency: '../../Processor::LoopNode', name: 'LoopNode'})
+            .register({dependency: '../../Processor::Processor', name: 'Processor'})
+            .register({dependency: '../../Processor::NoOpTaskNode', name: 'NoOpTaskNode'})
+            .register({dependency: '../../Processor::ProcessorLoader', name: 'processorLoader'})
+            .register({dependency: '../../Processor::ProcessorResolver', name: 'processorResolver'})
+            .register({dependency: '/TestClasses::TestTaskNode', name: 'TestTaskNode'})
+            .register({dependency: '/TestClasses::Test2TaskNode', name: 'Test2TaskNode'})
+            .register({dependency: '/TestClasses::Test3TaskNode', name: 'Test3TaskNode'})
+            .register({dependency: '/TestClasses::Test4TaskNode', name: 'Test4TaskNode'})
+            .register({dependency: '/TestClasses::TestLoopTaskNode', name: 'TestLoopTaskNode'})
+            .register({dependency: '/TestClasses::Test2LoopTaskNode', name: 'Test2LoopTaskNode'})
+            .register({
+                dependency: '/TestClasses::TestPredecessorToLoopTaskNode',
+                name: 'TestPredecessorToLoopTaskNode'
+            })
+            .register({dependency: '/TestClasses::TestSuccessorToLoopTaskNode', name: 'TestSuccessorToLoopTaskNode'})
+            .register({
+                dependency: '/TestClasses::TestCompensationToLoopTaskNode',
+                name: 'TestCompensationToLoopTaskNode'
+            })
         callback();
     },
     tearDown: function (callback) {
         // clean up
         callback();
     },
-    testCanInstantiateProcessor: function (test) {
-        var processor = new Processor();
-
-        test.ok(processor, "Processor is not properly created");
-        test.done();
-    },
-    testTaskNodeCanOnlyHaveANodeObjectSuccessor: function (test) {
+    t2estTaskNodeCanOnlyHaveANodeObjectSuccessor: function (test) {
         test.doesNotThrow(function () {
             var taskNode = NodeFactory.create('TaskNode', {successor: NodeFactory.create('TaskNode')});
         });
@@ -49,7 +63,7 @@ module.exports = {
 
         test.done();
     },
-    testConditionNodeHasMinimumRequirements: function (test) {
+    t3estConditionNodeHasMinimumRequirements: function (test) {
 
         test.doesNotThrow(function () {
             var conditionTask = NodeFactory.create('ConditionNode', {
@@ -78,7 +92,7 @@ module.exports = {
         });
         test.done();
     },
-    testCanInjectTaskNode: function (test) {
+    t4estCanInjectTaskNode: function (test) {
 
         var taskNode = Injector.resolve({target: 'TaskNode'});
 
@@ -87,11 +101,11 @@ module.exports = {
 
         test.done();
     },
-    testCanInjectConditionNode: function (test) {
+    t5estCanInjectConditionNode: function (test) {
         var conditionNode = Injector.resolve({target: 'ConditionNode'})
         test.done();
     },
-    testTaskCanExecute: function (test) {
+    t6estTaskCanExecute: function (test) {
         var taskNode = NodeFactory.create("TestTaskNode");
 
         var request = {data: []};
@@ -110,7 +124,7 @@ module.exports = {
             test.done();
         });
     },
-    testTaskCanExecuteSequence: function (test) {
+    t7estTaskCanExecuteSequence: function (test) {
         var taskNode = NodeFactory.create("TestTaskNode", {successor: NodeFactory.create('Test2TaskNode')});
 
         var request = {data: []};
@@ -132,7 +146,7 @@ module.exports = {
         });
 
     },
-    testTaskCanExecuteLongerSequence: function (test) {
+    t8estTaskCanExecuteLongerSequence: function (test) {
         var taskNode = NodeFactory.create("TestTaskNode",
             {
                 successor: NodeFactory.create('Test2TaskNode',
@@ -162,7 +176,7 @@ module.exports = {
         });
 
     },
-    testTaskCanTrapErrors: function (test) {
+    t9estTaskCanTrapErrors: function (test) {
         var taskNode = NodeFactory.create("Test4TaskNode");
 
         var request = {data: []};
@@ -179,7 +193,7 @@ module.exports = {
         });
 
     },
-    testTaskCanTrapErrorsInLongSequence: function (test) {
+    t10estTaskCanTrapErrorsInLongSequence: function (test) {
         var taskNode = NodeFactory.create("TestTaskNode",
             {
                 successor: NodeFactory.create('Test2TaskNode',
@@ -210,7 +224,7 @@ module.exports = {
         });
 
     },
-    testTaskCanInstantiateConditional: function (test) {
+    t11estTaskCanInstantiateConditional: function (test) {
 
         var node = NodeFactory.create('ConditionNode', {
             condition: true,
@@ -221,7 +235,7 @@ module.exports = {
         test.ok(node);
         test.done();
     },
-    testTaskCanExecuteConditional: function (test) {
+    t12estTaskCanExecuteConditional: function (test) {
 
         var node = NodeFactory.create('ConditionNode', {
             condition: function () {
@@ -248,7 +262,7 @@ module.exports = {
             test.done();
         });
     },
-    testTaskCanExecuteConditionalWithSuccessor: function (test) {
+    t13estTaskCanExecuteConditionalWithSuccessor: function (test) {
 
         var node = NodeFactory.create('ConditionNode', {
             condition: function () {
@@ -282,7 +296,7 @@ module.exports = {
             test.done();
         });
     },
-    testTaskCanExecuteFalseConditionalWithSuccessor: function (test) {
+    t14estTaskCanExecuteFalseConditionalWithSuccessor: function (test) {
 
         var node = NodeFactory.create('ConditionNode', {
             condition: function () {
@@ -317,7 +331,7 @@ module.exports = {
             test.done();
         });
     },
-    testTaskCanExecuteConditionalSequenceWithSuccessor: function (test) {
+    t15estTaskCanExecuteConditionalSequenceWithSuccessor: function (test) {
 
         var node = NodeFactory.create('ConditionNode', {
             condition: function () {
@@ -354,7 +368,7 @@ module.exports = {
             test.done();
         });
     },
-    testTaskCanExecuteStartPlusConditionalSequenceWithSuccessor: function (test) {
+    t16estTaskCanExecuteStartPlusConditionalSequenceWithSuccessor: function (test) {
 
         var node = NodeFactory.create('Test3TaskNode',
             {
@@ -397,7 +411,7 @@ module.exports = {
             test.done();
         });
     },
-    testTaskCanExecuteStartPlusConditionalWithSuccessorAndErrorInTrueSuccessor: function (test) {
+    t17estTaskCanExecuteStartPlusConditionalWithSuccessorAndErrorInTrueSuccessor: function (test) {
         var node = NodeFactory.create('Test3TaskNode',
             {
                 successor: NodeFactory.create('ConditionNode',
@@ -437,7 +451,7 @@ module.exports = {
             test.done();
         });
     },
-    testTaskCanExecuteStartPlusConditionalWithSuccessorAndErrorBeforeCondition: function (test) {
+    t18estTaskCanExecuteStartPlusConditionalWithSuccessorAndErrorBeforeCondition: function (test) {
         var node = NodeFactory.create('Test4TaskNode',
             {
                 successor: NodeFactory.create('ConditionNode',
@@ -466,7 +480,7 @@ module.exports = {
             test.done();
         });
     },
-    testTaskCanExecuteStartPlusConditionalWithSuccessorAndErrorSuccessor: function (test) {
+    t19estTaskCanExecuteStartPlusConditionalWithSuccessorAndErrorSuccessor: function (test) {
         var node = NodeFactory.create('Test3TaskNode',
             {
                 successor: NodeFactory.create('ConditionNode',
@@ -508,7 +522,7 @@ module.exports = {
             test.done();
         });
     },
-    testTaskCanExecuteStartPlusConditionalWithSuccessorMissingFalseSuccessor: function (test) {
+    t20estTaskCanExecuteStartPlusConditionalWithSuccessorMissingFalseSuccessor: function (test) {
         var node = NodeFactory.create('Test3TaskNode',
             {
                 successor: NodeFactory.create('ConditionNode',
@@ -545,7 +559,7 @@ module.exports = {
             test.done();
         });
     },
-    testTaskCanExecuteStartPlusConditionalWithSuccessorMissingFalseSuccessorAndErrorInSuccessor: function (test) {
+    t21estTaskCanExecuteStartPlusConditionalWithSuccessorMissingFalseSuccessorAndErrorInSuccessor: function (test) {
         var node = NodeFactory.create('Test3TaskNode',
             {
                 successor: NodeFactory.create('ConditionNode',
@@ -579,9 +593,8 @@ module.exports = {
 
             test.done();
         });
-    }
-    ,
-    testCompensatedTaskWithNoPredecessorAndNoSuccessorAndOneTaskNoError: function (test) {
+    },
+    t22estCompensatedTaskWithNoPredecessorAndNoSuccessorAndOneTaskNoError: function (test) {
         //expect to see only task executed
 
         var node = NodeFactory.create('CompensatedNode',
@@ -606,9 +619,8 @@ module.exports = {
             test.done();
         });
 
-    }
-    ,
-    testCompensantedTaskWithNoPredecessorAndNoSuccessorOneTaskWithError: function (test) {
+    },
+    t23estCompensantedTaskWithNoPredecessorAndNoSuccessorOneTaskWithError: function (test) {
 
         //expect to see only compensated task executed
 
@@ -635,9 +647,8 @@ module.exports = {
 
             test.done();
         });
-    }
-    ,
-    testCompensantedTaskWithNoPredecessorAndNoSuccessorTwoTaskWithError: function (test) {
+    },
+    t24estCompensantedTaskWithNoPredecessorAndNoSuccessorTwoTaskWithError: function (test) {
         var node = NodeFactory.create('CompensatedNode',
             {
                 startNode: NodeFactory.create('Test2TaskNode', {successor: NodeFactory.create('Test4TaskNode')}),
@@ -664,9 +675,8 @@ module.exports = {
 
             test.done();
         });
-    }
-    ,
-    testCompensantedTaskWithNoPredecessorAndOneSuccessorOneTaskNoError: function (test) {
+    },
+    t25estCompensantedTaskWithNoPredecessorAndOneSuccessorOneTaskNoError: function (test) {
         var node = NodeFactory.create('CompensatedNode',
             {
                 startNode: NodeFactory.create('Test2TaskNode'),
@@ -693,9 +703,8 @@ module.exports = {
 
             test.done();
         });
-    }
-    ,
-    testCompensantedTaskWithNoPredecessorAndOneSuccessorOneTaskWithError: function (test) {
+    },
+    t26estCompensantedTaskWithNoPredecessorAndOneSuccessorOneTaskWithError: function (test) {
         var node = NodeFactory.create('CompensatedNode',
             {
                 startNode: NodeFactory.create('Test2TaskNode', {successor: NodeFactory.create('Test4TaskNode')}),
@@ -723,9 +732,8 @@ module.exports = {
 
             test.done();
         });
-    }
-    ,
-    testCompensantedTaskWithNoPredecessorAndOneSuccessorTwoTaskNoError: function (test) {
+    },
+    t27estCompensantedTaskWithNoPredecessorAndOneSuccessorTwoTaskNoError: function (test) {
         var node = NodeFactory.create('CompensatedNode',
             {
                 startNode: NodeFactory.create('Test2TaskNode', {successor: NodeFactory.create('Test3TaskNode')}),
@@ -756,9 +764,8 @@ module.exports = {
 
             test.done();
         });
-    }
-    ,
-    testCompensantedTaskWithNoPredecessorAndOneSuccessorTwoTaskWithError: function (test) {
+    },
+    t28estCompensantedTaskWithNoPredecessorAndOneSuccessorTwoTaskWithError: function (test) {
         var node = NodeFactory.create('CompensatedNode',
             {
                 startNode: NodeFactory.create('Test2TaskNode', {successor: NodeFactory.create('Test3TaskNode', {successor: NodeFactory.create('Test4TaskNode')})}),
@@ -789,9 +796,8 @@ module.exports = {
 
             test.done();
         });
-    }
-    ,
-    testCompensantedTaskWithPredecessorAndOneSuccessorTwoTaskNoError: function (test) {
+    },
+    t29estCompensantedTaskWithPredecessorAndOneSuccessorTwoTaskNoError: function (test) {
         var node = NodeFactory.create('TestTaskNode', {
             successor: NodeFactory.create('CompensatedNode',
                 {
@@ -825,9 +831,8 @@ module.exports = {
 
             test.done();
         });
-    }
-    ,
-    testCompensantedTaskWithPredecessorAndOneSuccessorTwoTaskWithError: function (test) {
+    },
+    t30estCompensantedTaskWithPredecessorAndOneSuccessorTwoTaskWithError: function (test) {
         var node = NodeFactory.create('TestTaskNode', {
             successor: NodeFactory.create('CompensatedNode',
                 {
@@ -862,7 +867,7 @@ module.exports = {
             test.done();
         });
     },
-    testCompensantedTaskWithPredecessorAndOneSuccessorTwoTaskWithError2Compensation: function (test) {
+    t31estCompensantedTaskWithPredecessorAndOneSuccessorTwoTaskWithError2Compensation: function (test) {
         var node = NodeFactory.create('TestTaskNode', {
             successor: NodeFactory.create('CompensatedNode',
                 {
@@ -898,9 +903,8 @@ module.exports = {
 
             test.done();
         });
-    }
-    ,
-    testCompensantedTaskWithPredecessorAndOneSuccessorTwoTaskWithError2CompensationWithError: function (test) {
+    },
+    t32estCompensantedTaskWithPredecessorAndOneSuccessorTwoTaskWithError2CompensationWithError: function (test) {
         var node = NodeFactory.create('TestTaskNode', {
             successor: NodeFactory.create('CompensatedNode',
                 {
@@ -936,9 +940,8 @@ module.exports = {
 
             test.done();
         });
-    }
-    ,
-    testLoopTaskNoPredecessorNoSuccessorShouldLoopTwice: function (test) {
+    },
+    t33estLoopTaskNoPredecessorNoSuccessorShouldLoopTwice: function (test) {
         var node = NodeFactory.create('LoopNode', {
             startNode: NodeFactory.create('TestLoopTaskNode'),
             condition: function (fact) {
@@ -969,9 +972,8 @@ module.exports = {
 
             test.done();
         });
-    }
-    ,
-    testLoopTaskwithPredecessorNoSuccessorShouldLoopTwice: function (test) {
+    },
+    t34estLoopTaskwithPredecessorNoSuccessorShouldLoopTwice: function (test) {
         var node = NodeFactory.create('TestPredecessorToLoopTaskNode', {
             successor: NodeFactory.create('LoopNode', {
                 startNode: NodeFactory.create('TestLoopTaskNode'),
@@ -1006,9 +1008,8 @@ module.exports = {
 
             test.done();
         });
-    }
-    ,
-    testLoopTaskwithPredecessorNoSuccessorAndLongSequenceShouldLoopTwice: function (test) {
+    },
+    t35estLoopTaskwithPredecessorNoSuccessorAndLongSequenceShouldLoopTwice: function (test) {
         var node = NodeFactory.create('TestPredecessorToLoopTaskNode', {
             successor: NodeFactory.create('LoopNode', {
                 startNode: NodeFactory.create('TestLoopTaskNode', {successor: NodeFactory.create('Test2LoopTaskNode')}),
@@ -1045,9 +1046,8 @@ module.exports = {
 
             test.done();
         });
-    }
-    ,
-    testLoopTaskWithPredecessorAndSuccessorAndLongSequenceShouldLoopTwice: function (test) {
+    },
+    t36estLoopTaskWithPredecessorAndSuccessorAndLongSequenceShouldLoopTwice: function (test) {
         var node = NodeFactory.create('TestPredecessorToLoopTaskNode', {
             successor: NodeFactory.create('LoopNode', {
                 startNode: NodeFactory.create('TestLoopTaskNode', {successor: NodeFactory.create('Test2LoopTaskNode')}),
@@ -1086,9 +1086,8 @@ module.exports = {
 
             test.done();
         });
-    }
-    ,
-    testLoopTaskWithPredecessorAndSuccessorAndLongSequenceShouldStopOnError: function (test) {
+    },
+    t37estLoopTaskWithPredecessorAndSuccessorAndLongSequenceShouldStopOnError: function (test) {
         var node = NodeFactory.create('TestPredecessorToLoopTaskNode', {
             successor: NodeFactory.create('LoopNode', {
                 startNode: NodeFactory.create('TestLoopTaskNode',
@@ -1128,9 +1127,8 @@ module.exports = {
 
             test.done();
         });
-    }
-    ,
-    testLoopTaskWithPredecessorAndSuccessorAndLongSequenceShouldStopOnErrorWithCompensation: function (test) {
+    },
+    t38estLoopTaskWithPredecessorAndSuccessorAndLongSequenceShouldStopOnErrorWithCompensation: function (test) {
         var node = NodeFactory.create('TestPredecessorToLoopTaskNode', {
             successor: NodeFactory.create('LoopNode', {
                 condition: function (fact) {
@@ -1177,8 +1175,8 @@ module.exports = {
             test.done();
         });
     },
-    testCanInstantiateProcessor: function(test) {
-        Injector.register({dependency: '/lib/TestClasses::ProcessorTestLoader', name: 'processorLoader'})
+    t39estCanInstantiateProcessor: function (test) {
+        Injector.register({dependency: '/TestClasses::ProcessorTestLoader', name: 'processorLoader'})
 
         var processor = Processor.getProcessor('testProcessor');
 
@@ -1186,8 +1184,8 @@ module.exports = {
 
         test.done();
     },
-    testCanExecuteComplexProcessorWithError: function (test) {
-        Injector.register({dependency: '/lib/TestClasses::ProcessorTestErrorLoader', name: 'processorLoader'})
+    t40estCanExecuteComplexProcessorWithError: function (test) {
+        Injector.register({dependency: '/TestClasses::ProcessorTestErrorLoader', name: 'processorLoader'})
 
 
         var processor = Processor.getProcessor('testProcessorWithError');
@@ -1220,10 +1218,9 @@ module.exports = {
 
             test.done();
         });
-    }
-    ,
-    testCanExecuteComplexProcessor: function (test) {
-        Injector.register({dependency: '/lib/TestClasses::ProcessorTestLoader', name: 'processorLoader'})
+    },
+    t41estCanExecuteComplexProcessor: function (test) {
+        Injector.register({dependency: '/TestClasses::ProcessorTestLoader', name: 'processorLoader'})
 
         var processor = Processor.getProcessor('testProcessor');
 
@@ -1231,39 +1228,38 @@ module.exports = {
 
         request.data = {index: 0};
 
-            processor.execute(request).then(function (response) {
-                var p = processor;
-                try {
-                    test.ok(response.data.data.steps.length == 6, "Unexpected response items");
-                    test.ok(response.data.data.steps[0] == "passed in predecessor");
-                    test.ok(response.data.data.steps[1] == "executed in loop");
-                    test.ok(response.data.data.steps[2] == "executed in loop 2");
-                    test.ok(response.data.data.steps[3] == "executed in loop");
-                    test.ok(response.data.data.steps[4] == "executed in loop 2");
-                    test.ok(response.data.data.steps[5] == "passed in successor");
+        processor.execute(request).then(function (response) {
+            var p = processor;
+            try {
+                test.ok(response.data.data.steps.length == 6, "Unexpected response items");
+                test.ok(response.data.data.steps[0] == "passed in predecessor");
+                test.ok(response.data.data.steps[1] == "executed in loop");
+                test.ok(response.data.data.steps[2] == "executed in loop 2");
+                test.ok(response.data.data.steps[3] == "executed in loop");
+                test.ok(response.data.data.steps[4] == "executed in loop 2");
+                test.ok(response.data.data.steps[5] == "passed in successor");
 
-                    test.ok(request.data.index == 2);
-
-
-                    test.ok(response.errors.length == 0, "Errors doesn't have expected number of items");
-                    test.ok(response.isSuccess == true, "isSuccess should be false");
-                } catch (e) {
-                    test.ok(false, "Error while executing");
-                    console.log(e.message);
-                }
+                test.ok(request.data.index == 2);
 
 
-                test.done();
-            });
+                test.ok(response.errors.length == 0, "Errors doesn't have expected number of items");
+                test.ok(response.isSuccess == true, "isSuccess should be false");
+            } catch (e) {
+                test.ok(false, "Error while executing");
+                console.log(e.message);
+            }
+
+
+            test.done();
+        });
 
     },
-    testLoad: function(test)
-    {
-        Injector.register({dependency: '/lib/TestClasses::ProcessorTestLoader', name: 'processorLoader'})
+    t42estLoad: function (test) {
+        Injector.register({dependency: '/TestClasses::ProcessorTestLoader', name: 'processorLoader'})
 
 
         var promises = [];
-        for(var i=0;i<10;i++){
+        for (var i = 0; i < 10; i++) {
             var processor = Processor.getProcessor("testProcessor");
             var request = new processor.messaging.ServiceMessage();
             request.SetCorrelationId();
@@ -1274,6 +1270,8 @@ module.exports = {
 
         }
 
-        q.all(promises).then(function(){ test.done()})
+        q.all(promises).then(function () {
+            test.done()
+        })
     }
 };
