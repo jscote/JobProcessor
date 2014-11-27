@@ -3,6 +3,7 @@
  */
 (function (util, _, q, process, log4js, Injector, serviceMessage) {
 
+    'use strict';
     /*
      Expected hierarchy of objects to deal with in the execution of a process. It all starts with a BlockNode, which will
      contain one or more child nodes.
@@ -21,9 +22,13 @@
 
      */
 
+
     Injector.register({dependency: serviceMessage, name: 'serviceMessage'});
 
+
+
     var logger = log4js.getLogger();
+    logger.setLevel('ERROR');
 
 
     function copyResponseIntoAnother(response, successorResponse) {
@@ -659,9 +664,8 @@
 
             }
 
-            var node = NodeFactory.create(nodeType, inner);
-            return node;
-        };
+            return NodeFactory.create(nodeType, inner);
+        }
 
         materializedDefinition = internalParse(processorDefinition);
 
@@ -749,6 +753,17 @@
     exports.NodeFactory = NodeFactory;
     exports.LoopNode = LoopNode;
     exports.NoOpTaskNode = NoOpTaskNode;
+
+    Injector.setBasePath(__dirname);
+    Injector
+        .register({dependency: '/Processor::TaskNode', name: 'TaskNode'})
+        .register({dependency: '/Processor::ConditionNode', name: 'ConditionNode'})
+        .register({dependency: '/Processor::CompensatedNode', name: 'CompensatedNode'})
+        .register({dependency: '/Processor::LoopNode', name: 'LoopNode'})
+        .register({dependency: '/Processor::Processor', name: 'Processor'})
+        .register({dependency: '/Processor::NoOpTaskNode', name: 'NoOpTaskNode'})
+        .register({dependency: '/Processor::ProcessorLoader', name: 'processorLoader'})
+        .register({dependency: '/Processor::ProcessorResolver', name: 'processorResolver'})
 
 })
 (

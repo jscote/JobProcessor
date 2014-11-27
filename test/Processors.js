@@ -5,8 +5,7 @@
 var p = require('path');
 var q = require('q');
 var util = require('util');
-Injector = require('jsai-injector');
-//require(p.resolve(__dirname + '../../../server/config/injection'))(p.resolve(__dirname + '../../../server/'));
+global.Injector = require('jsai-injector');
 
 var Processor = require('../Processor').Processor;
 var ProcessorLoader = require('../Processor').ProcessorLoader;
@@ -22,15 +21,6 @@ module.exports = {
         Injector.setBasePath(__dirname);
 
         Injector
-            //.register({dependency: '../../serviceMessage', name: 'serviceMessage'})
-            .register({dependency: '../../Processor::TaskNode', name: 'TaskNode'})
-            .register({dependency: '../../Processor::ConditionNode', name: 'ConditionNode'})
-            .register({dependency: '../../Processor::CompensatedNode', name: 'CompensatedNode'})
-            .register({dependency: '../../Processor::LoopNode', name: 'LoopNode'})
-            .register({dependency: '../../Processor::Processor', name: 'Processor'})
-            .register({dependency: '../../Processor::NoOpTaskNode', name: 'NoOpTaskNode'})
-            .register({dependency: '../../Processor::ProcessorLoader', name: 'processorLoader'})
-            .register({dependency: '../../Processor::ProcessorResolver', name: 'processorResolver'})
             .register({dependency: '/TestClasses::TestTaskNode', name: 'TestTaskNode'})
             .register({dependency: '/TestClasses::Test2TaskNode', name: 'Test2TaskNode'})
             .register({dependency: '/TestClasses::Test3TaskNode', name: 'Test3TaskNode'})
@@ -1259,7 +1249,7 @@ module.exports = {
 
 
         var promises = [];
-        for (var i = 0; i < 10; i++) {
+        for (var i = 0; i < 1000; i++) {
             var processor = Processor.getProcessor("testProcessor");
             var request = new processor.messaging.ServiceMessage();
             request.SetCorrelationId();
