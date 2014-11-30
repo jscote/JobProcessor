@@ -1178,71 +1178,72 @@ module.exports = {
         Injector.register({dependency: '/TestClasses::ProcessorTestErrorLoader', name: 'processorLoader'})
 
 
-        var processor = Processor.getProcessor('testProcessorWithError');
+        Processor.getProcessor('testProcessorWithError').then(function (processor) {
 
-        var request = new processor.messaging.ServiceMessage();
+            var request = new processor.messaging.ServiceMessage();
 
-        request.data = {index: 0};
+            request.data = {index: 0};
 
-        processor.execute(request).then(function (response) {
+            processor.execute(request).then(function (response) {
 
-            var p = processor;
-            try {
+                var p = processor;
+                try {
 
-                test.ok(response.data.data.steps.length == 4, "Unexpected response items");
-                test.ok(response.data.data.steps[0] == "passed in predecessor");
-                test.ok(response.data.data.steps[1] == "executed in loop");
-                test.ok(response.data.data.steps[2] == "executed in loop 2");
-                test.ok(response.data.data.steps[3] == "passed in compensation");
+                    test.ok(response.data.data.steps.length == 4, "Unexpected response items");
+                    test.ok(response.data.data.steps[0] == "passed in predecessor");
+                    test.ok(response.data.data.steps[1] == "executed in loop");
+                    test.ok(response.data.data.steps[2] == "executed in loop 2");
+                    test.ok(response.data.data.steps[3] == "passed in compensation");
 
-                test.ok(request.data.index == 1);
-
-
-                test.ok(response.errors.length == 1, "Errors doesn't have expected number of items");
-                test.ok(response.isSuccess == false, "isSuccess should be false");
-            } catch (e) {
-                test.ok(false, "Error while executing");
-                console.log(e.message);
-            }
+                    test.ok(request.data.index == 1);
 
 
-            test.done();
+                    test.ok(response.errors.length == 1, "Errors doesn't have expected number of items");
+                    test.ok(response.isSuccess == false, "isSuccess should be false");
+                } catch (e) {
+                    test.ok(false, "Error while executing");
+                    console.log(e.message);
+                }
+
+
+                test.done();
+            });
         });
     },
     t41estCanExecuteComplexProcessor: function (test) {
         Injector.register({dependency: '/TestClasses::ProcessorTestLoader', name: 'processorLoader'})
 
-        var processor = Processor.getProcessor('testProcessor');
+        Processor.getProcessor('testProcessor').then(function (processor) {
 
-        var request = new processor.messaging.ServiceMessage();
+            var request = new processor.messaging.ServiceMessage();
 
-        request.data = {index: 0};
+            request.data = {index: 0};
 
-        processor.execute(request).then(function (response) {
-            var p = processor;
-            try {
-                test.ok(response.data.data.steps.length == 6, "Unexpected response items");
-                test.ok(response.data.data.steps[0] == "passed in predecessor");
-                test.ok(response.data.data.steps[1] == "executed in loop");
-                test.ok(response.data.data.steps[2] == "executed in loop 2");
-                test.ok(response.data.data.steps[3] == "executed in loop");
-                test.ok(response.data.data.steps[4] == "executed in loop 2");
-                test.ok(response.data.data.steps[5] == "passed in successor");
+            processor.execute(request).then(function (response) {
+                var p = processor;
+                try {
+                    test.ok(response.data.data.steps.length == 6, "Unexpected response items");
+                    test.ok(response.data.data.steps[0] == "passed in predecessor");
+                    test.ok(response.data.data.steps[1] == "executed in loop");
+                    test.ok(response.data.data.steps[2] == "executed in loop 2");
+                    test.ok(response.data.data.steps[3] == "executed in loop");
+                    test.ok(response.data.data.steps[4] == "executed in loop 2");
+                    test.ok(response.data.data.steps[5] == "passed in successor");
 
-                test.ok(request.data.index == 2);
-
-
-                test.ok(response.errors.length == 0, "Errors doesn't have expected number of items");
-                test.ok(response.isSuccess == true, "isSuccess should be false");
-            } catch (e) {
-                test.ok(false, "Error while executing");
-                console.log(e.message);
-            }
+                    test.ok(request.data.index == 2);
 
 
-            test.done();
+                    test.ok(response.errors.length == 0, "Errors doesn't have expected number of items");
+                    test.ok(response.isSuccess == true, "isSuccess should be false");
+                } catch (e) {
+                    test.ok(false, "Error while executing");
+                    console.log(e.message);
+                }
+
+
+                test.done();
+            });
         });
-
     },
     t42estLoad: function (test) {
         Injector.register({dependency: '/TestClasses::ProcessorTestLoader', name: 'processorLoader'})
@@ -1250,13 +1251,14 @@ module.exports = {
 
         var promises = [];
         for (var i = 0; i < 1000; i++) {
-            var processor = Processor.getProcessor("testProcessor");
-            var request = new processor.messaging.ServiceMessage();
-            request.SetCorrelationId();
+            Processor.getProcessor("testProcessor").then(function (processor) {
+                var request = new processor.messaging.ServiceMessage();
+                request.SetCorrelationId();
 
-            request.data = {index: 0};
+                request.data = {index: 0};
 
-            promises.push(processor.execute(request));
+                promises.push(processor.execute(request));
+            });
 
         }
 

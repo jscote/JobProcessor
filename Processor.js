@@ -26,7 +26,6 @@
     Injector.register({dependency: serviceMessage, name: 'serviceMessage'});
 
 
-
     var logger = log4js.getLogger();
     logger.setLevel('ERROR');
 
@@ -132,7 +131,7 @@
                 this.executionContext.steps = [];
             }
 
-            if(_.isUndefined(action)) {
+            if (_.isUndefined(action)) {
                 this.executionContext.steps.push({action: "visiting", name: this.name});
             } else {
                 this.executionContext.steps.push({action: action, name: this.name});
@@ -567,7 +566,7 @@
 
     }
 
-    ProcessorLoader.prototype.load = function(processorName) {
+    ProcessorLoader.prototype.load = function (processorName) {
 
     };
 
@@ -596,61 +595,67 @@
 
     var cache = {};
 
-    function ProcessorCache(){
+    function ProcessorCache() {
 
     }
 
-    ProcessorCache.add = function(name, processorDefinition) {
+    ProcessorCache.add = function (name, processorDefinition) {
         cache[name] = processorDefinition;
     };
 
-    ProcessorCache.get = function(name) {
-        if(!_.isUndefined(cache[name])) return cache[name];
+    ProcessorCache.get = function (name) {
+        if (!_.isUndefined(cache[name])) return cache[name];
 
         return null;
     };
 
     ProcessorResolver.prototype.load = function (processorName) {
 
-        //TODO the entire processor stuff should be built as a package that can be reuse across projects.
+        var dfd = q.defer();
+        var self = this;
 
-        var parsedProcessor = this.getFromCache(processorName);
+        process.nextTick(function () {
 
-        if(parsedProcessor == null) {
-            var processorDefinition = this.processorLoader.load(processorName);
-            parsedProcessor = this.parseProcessorDefinition(processorDefinition);
+            var parsedProcessor = self.getFromCache(processorName);
 
-            this.addToCache(processorName, parsedProcessor);
+            if (parsedProcessor == null) {
+                q.fcall(self.processorLoader.load, processorName).then(function (processorDefinition) {
+                    parsedProcessor = self.parseProcessorDefinition(processorDefinition);
+                    self.addToCache(processorName, parsedProcessor);
+                    dfd.resolve(parsedProcessor);
+                });
 
-        }
+            } else {
+                dfd.resolve(parsedProcessor);
+            }
+        });
 
-        return parsedProcessor;
+        return dfd.promise;
 
     };
 
-    ProcessorResolver.prototype.parseProcessorDefinition = function(processorDefinition){
-        //TODO Implement parsing of definition
+    ProcessorResolver.prototype.parseProcessorDefinition = function (processorDefinition) {
 
-        if(_.isUndefined(processorDefinition) || !processorDefinition) {
+        if (_.isUndefined(processorDefinition) || !processorDefinition) {
             throw Error("Process definition is not provided");
         }
 
         var materializedDefinition = {};
 
-        function internalParse (innerDefinition) {
+        function internalParse(innerDefinition) {
             var nodeType = '';
             var parameters = null;
             var inner = {};
 
-            for(var prop in innerDefinition) {
+            for (var prop in innerDefinition) {
 
-                if(prop == 'nodeType') {
+                if (prop == 'nodeType') {
                     nodeType = innerDefinition[prop];
-                } else if(prop == 'parameters') {
+                } else if (prop == 'parameters') {
                     parameters = innerDefinition[prop];
-                    if(!_.isUndefined(parameters)) {
-                        for(var paramProp in parameters) {
-                            if(paramProp == 'condition') {
+                    if (!_.isUndefined(parameters)) {
+                        for (var paramProp in parameters) {
+                            if (paramProp == 'condition') {
                                 inner[paramProp] = parameters[paramProp];
                             } else {
                                 inner[paramProp] = internalParse(parameters[paramProp]);
@@ -672,11 +677,11 @@
         return materializedDefinition;
     };
 
-    ProcessorResolver.prototype.addToCache = function(processorName, processorDefinition) {
+    ProcessorResolver.prototype.addToCache = function (processorName, processorDefinition) {
         ProcessorCache.add(processorName, processorDefinition);
     };
 
-    ProcessorResolver.prototype.getFromCache = function(processorName) {
+    ProcessorResolver.prototype.getFromCache = function (processorName) {
         return ProcessorCache.get(processorName);
     };
 
@@ -711,20 +716,30 @@
     Processor.prototype.initialize = function (params) {
         params = params || {};
 
-        var process = this.processorResolver.load(params.name);
-        params.startNode = process.startNode;
-        params.compensationNode = process.compensationNode;
-
-        params.startNode.executionContext = this.executionContext;
-        params.compensationNode.executionContext = this.executionContext;
-
-        Processor.super_.prototype.initialize.call(this, params);
 
     };
 
-    Processor.prototype.execute = function(request){
+    Processor.prototype.load = function (processorName) {
+        var params = {};
+        var self = this;
+        var dfd = q.defer();
 
-        if(!(request instanceof this.messaging.ServiceMessage)) {
+        this.processorResolver.load(processorName).then(function (process) {
+            params.startNode = process.startNode;
+            params.compensationNode = process.compensationNode;
+
+            params.startNode.executionContext = self.executionContext;
+            params.compensationNode.executionContext = self.executionContext;
+
+            Processor.super_.prototype.initialize.call(self, params);
+            dfd.resolve();
+        });
+        return dfd.promise;
+    };
+
+    Processor.prototype.execute = function (request) {
+
+        if (!(request instanceof this.messaging.ServiceMessage)) {
             logger.error("Request should be of ServiceMessage type");
             throw Error("Request should be of ServiceMessage type");
         }
@@ -732,7 +747,7 @@
         this.executionContext.steps = [];
         var context = {};
         var dfd = q.defer();
-        Processor.super_.prototype.execute.call(this, request, context).then(function(response){
+        Processor.super_.prototype.execute.call(this, request, context).then(function (response) {
             response.data = context;
             dfd.resolve(response);
         });
@@ -741,7 +756,17 @@
 
     Processor.getProcessor = function (processorName) {
         var params = {name: processorName};
-        return NodeFactory.create('Processor', params);
+        var processor = NodeFactory.create('Processor', params);
+
+        var dfd = q.defer();
+
+        processor.load(processorName).then(function () {
+
+            dfd.resolve(processor);
+
+        });
+
+        return dfd.promise;
     };
 
     exports.Processor = Processor;
