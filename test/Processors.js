@@ -2,13 +2,11 @@
  * Created by jean-sebastiencote on 11/1/14.
  */
 
-var p = require('path');
 var q = require('q');
 var util = require('util');
 global.Injector = require('jsai-injector');
 
 var Processor = require('../Processor').Processor;
-var ProcessorLoader = require('../Processor').ProcessorLoader;
 var NodeFactory = require('../Processor').NodeFactory;
 var TaskNode = require('../Processor').TaskNode;
 var ConditionNode = require('../Processor').ConditionNode;
@@ -1218,11 +1216,16 @@ module.exports = {
                 request.data = {index: 0};
 
                 promises.push(processor.execute(request));
+
+                if(i%10 == 0) {
+                    test.ok(Processor.Count > 0, 'Count is not greater than 0');
+                 }
             });
 
         }
 
         q.all(promises).then(function () {
+            test.ok(Processor.Count == 0);
             test.done()
         })
     }

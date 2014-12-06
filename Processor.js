@@ -52,7 +52,7 @@
 
     ExecutionContext.prototype.visiting = function (node, message, action) {
 
-        if(!this.trackingEnabled) return;
+        if (!this.trackingEnabled) return;
 
         logger.info(message || '', action || 'Visiting ', node.name, ' for correlationId ', this.correlationId || "No Correlation Id");
         if (_.isUndefined(action)) {
@@ -63,7 +63,7 @@
     };
 
     ExecutionContext.prototype.visited = function (node, message, action) {
-        if(!this.trackingEnabled) return;
+        if (!this.trackingEnabled) return;
 
         logger.info(message || '', action || 'Visited ', node.name, ' for correlationId ', this.correlationId || "No Correlation Id");
 
@@ -78,12 +78,6 @@
         this.errors.push(message);
         this.isSuccess = false;
     };
-
-    function copyResponseIntoAnother(response, successorResponse) {
-        response.errors = response.errors.concat(successorResponse.errors);
-        response.isSuccess = !response.isSuccess ? response.isSuccess : successorResponse.isSuccess;
-
-    }
 
     function executeSuccessor(self, executionContext, dfd, executeFn) {
         if (executionContext.isSuccess && self.successor) {
@@ -155,7 +149,6 @@
     };
 
     Node.prototype.execute = function (executionContext) {
-        var response;
         var self = this;
         var dfd = q.defer();
         try {
@@ -597,7 +590,7 @@
             throw Error("Process definition is not provided");
         }
 
-        var materializedDefinition = {};
+
 
 
         function internalParse(innerDefinition) {
@@ -622,8 +615,7 @@
                     }
                 } else if (prop == 'version' || prop == 'processorName') {
                     continue;
-                }
-                else {
+                } else {
                     return innerDefinition[prop];
                 }
 
@@ -632,7 +624,7 @@
 
             return NodeFactory.create(nodeType, inner);
         }
-
+        var materializedDefinition = {};
         materializedDefinition = internalParse(processorDefinition);
         materializedDefinition.version = processorDefinition.version;
         materializedDefinition.processorName = processorDefinition.processorName;
@@ -678,7 +670,6 @@
     util.inherits(Processor, CompensatedNode);
 
     Processor.prototype.initialize = function (params) {
-        params = params || {};
 
     };
 
@@ -719,12 +710,16 @@
         }
 
         var dfd = q.defer();
+        Processor.Count++;
         Processor.super_.prototype.execute.call(this, executionContext).then(function (responseExecutionContext) {
             if (responseExecutionContext.isCompensated) responseExecutionContext.isSuccess = false;
+            Processor.Count--;
             dfd.resolve(responseExecutionContext);
         });
         return dfd.promise;
     };
+
+    Processor.Count = 0;
 
     Processor.getProcessor = function (processorName) {
         var params = {name: processorName};
