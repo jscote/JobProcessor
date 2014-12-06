@@ -260,6 +260,8 @@
 
     ProcessorTestLoader.prototype.load = function (processorName) {
         var testProcessor = {
+            version: '0.1.1',
+            processorName: 'TestProcessor',
             nodeType: 'CompensatedNode',
             parameters: {
                 compensationNode: {nodeType: 'NoOpTaskNode'},
@@ -298,6 +300,8 @@
     ProcessorTestErrorLoader.prototype.load = function (processorName) {
 
         var testProcessor = {
+            version: '0.1.1',
+            processorName: 'TestProcessorWithError',
             nodeType: 'CompensatedNode',
             parameters: {
                 compensationNode: {nodeType: 'NoOpTaskNode'},
