@@ -252,96 +252,6 @@
 
     };
 
-    var ProcessorTestLoader = function () {
-        ProcessorLoader.call(this);
-    };
-
-    util.inherits(ProcessorTestLoader, ProcessorLoader);
-
-    ProcessorTestLoader.prototype.load = function (processorName) {
-        var testProcessor = {
-            version: '0.1.1',
-            processorName: 'TestProcessor',
-            nodeType: 'CompensatedNode',
-            parameters: {
-                compensationNode: {nodeType: 'NoOpTaskNode'},
-                startNode: {
-                    nodeType: 'TestPredecessorToLoopTaskNode',
-                    parameters: {
-                        successor: {
-                            nodeType: 'LoopNode',
-                            parameters: {
-                                startNode: {
-                                    nodeType: 'TestLoopTaskNode',
-                                    parameters: {successor: {nodeType: 'Test2LoopTaskNode'}}
-                                },
-                                condition: function (fact) {
-                                    return fact.request.data.index < 2;
-                                },
-                                successor: {nodeType: 'TestSuccessorToLoopTaskNode'}
-                            }
-                        }
-                    }
-                }
-            }
-        };
-
-        return testProcessor;
-
-    };
-
-
-    var ProcessorTestErrorLoader = function () {
-        ProcessorLoader.call(this);
-    };
-
-    util.inherits(ProcessorTestErrorLoader, ProcessorLoader);
-
-    ProcessorTestErrorLoader.prototype.load = function (processorName) {
-
-        var testProcessor = {
-            version: '0.1.1',
-            processorName: 'TestProcessorWithError',
-            nodeType: 'CompensatedNode',
-            parameters: {
-                compensationNode: {nodeType: 'NoOpTaskNode'},
-                startNode: {
-                    nodeType: 'TestPredecessorToLoopTaskNode',
-                    parameters: {
-                        successor: {
-                            nodeType: 'LoopNode',
-                            parameters: {
-                                startNode: {
-                                    nodeType: 'CompensatedNode', parameters: {
-                                        startNode: {
-                                            nodeType: 'TestLoopTaskNode',
-                                            parameters: {
-                                                successor: {
-                                                    nodeType: 'Test2LoopTaskNode',
-                                                    parameters: {successor: {nodeType: 'Test4TaskNode'}}
-                                                }
-                                            }
-                                        },
-                                        compensationNode: {nodeType: 'TestCompensationToLoopTaskNode'}
-                                    }
-                                },
-                                condition: function (fact) {
-                                    return fact.request.data.index < 2;
-                                },
-                                successor: {nodeType: 'TestSuccessorToLoopTaskNode'}
-                            }
-                        }
-                    }
-                }
-            }
-        };
-
-        return testProcessor;
-
-
-
-    };
-
 
     module.exports.TestTaskNode = TestTaskNode;
     module.exports.Test2TaskNode = Test2TaskNode;
@@ -352,8 +262,6 @@
     module.exports.TestPredecessorToLoopTaskNode = TestPredecessorToLoopTaskNode;
     module.exports.TestSuccessorToLoopTaskNode = TestSuccessorToLoopTaskNode;
     module.exports.TestCompensationToLoopTaskNode = TestCompensationToLoopTaskNode;
-    module.exports.ProcessorTestLoader = ProcessorTestLoader;
-    module.exports.ProcessorTestErrorLoader = ProcessorTestErrorLoader;
 
 })(
     require('lodash'),

@@ -517,7 +517,17 @@
     }
 
     ProcessorLoader.prototype.load = function (processorName) {
+        var dfd = q.defer();
 
+        process.nextTick(function () {
+            var processor;
+
+            processor = require(engineConfig.processorPath + '/' + processorName);
+
+            dfd.resolve(processor);
+        });
+
+        return dfd.promise;
     };
 
     function ProcessorResolver(processorLoader) {
@@ -703,10 +713,10 @@
             if (request.correlationId != null) {
                 executionContext.correlationId = request.correlationId;
             } else {
-                executionContext.SetCorrelationId();
+                executionContext.setCorrelationId();
             }
         } else {
-            executionContext.SetCorrelationId();
+            executionContext.setCorrelationId();
         }
 
         var dfd = q.defer();
@@ -720,6 +730,11 @@
     };
 
     Processor.Count = 0;
+
+    var engineConfig = {};
+    Processor.config = function(config){
+        engineConfig.processorPath = config.processorPath;
+    };
 
     Processor.getProcessor = function (processorName) {
         var params = {name: processorName};

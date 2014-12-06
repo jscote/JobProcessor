@@ -5,6 +5,7 @@
 var q = require('q');
 var util = require('util');
 global.Injector = require('jsai-injector');
+var p = require('path');
 
 var Processor = require('../Processor').Processor;
 var NodeFactory = require('../Processor').NodeFactory;
@@ -13,6 +14,7 @@ var ConditionNode = require('../Processor').ConditionNode;
 var LoopNode = require('../Processor').LoopNode;
 var ExecutionContext = require('../Processor').ExecutionContext;
 
+Processor.config({processorPath: p.resolve(__dirname + '/../SampleProcessors/')});
 
 module.exports = {
     setUp: function (callback) {
@@ -1124,7 +1126,6 @@ module.exports = {
         });
     },
     t39estCanInstantiateProcessor: function (test) {
-        Injector.register({dependency: '/TestClasses::ProcessorTestLoader', name: 'processorLoader'})
 
         var processor = Processor.getProcessor('testProcessor');
 
@@ -1133,8 +1134,6 @@ module.exports = {
         test.done();
     },
     t40estCanExecuteComplexProcessorWithError: function (test) {
-        Injector.register({dependency: '/TestClasses::ProcessorTestErrorLoader', name: 'processorLoader'})
-
 
         Processor.getProcessor('testProcessorWithError').then(function (processor) {
 
@@ -1169,7 +1168,6 @@ module.exports = {
         });
     },
     t41estCanExecuteComplexProcessor: function (test) {
-        Injector.register({dependency: '/TestClasses::ProcessorTestLoader', name: 'processorLoader'})
 
         Processor.getProcessor('testProcessor').then(function (processor) {
 
@@ -1204,14 +1202,12 @@ module.exports = {
         });
     },
     t42estLoad: function (test) {
-        Injector.register({dependency: '/TestClasses::ProcessorTestLoader', name: 'processorLoader'})
-
 
         var promises = [];
         for (var i = 0; i < 1000; i++) {
             Processor.getProcessor("testProcessor").then(function (processor) {
                 var request = new processor.messaging.ServiceMessage();
-                request.SetCorrelationId();
+                request.setCorrelationId();
 
                 request.data = {index: 0};
 
