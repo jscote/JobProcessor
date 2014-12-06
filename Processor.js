@@ -29,6 +29,27 @@
     var logger = log4js.getLogger();
     logger.setLevel('ERROR');
 
+    function ExecutionContext(options) {
+
+        serviceMessage.ServiceMessage.call(this, options);
+
+        Object.defineProperty(this, 'request', {writable: true, enumerable: true, value: options.request});
+        Object.defineProperty(this, 'steps', {writable: true, enumerable: true, value: []});
+        Object.defineProperty(this, 'isSuccess', {writable: true, enumerable: true, value: true});
+        Object.defineProperty(this, 'isCompensated', {writable: true, enumerable: true, value: false});
+        Object.defineProperty(this, 'errors', {writable: true, enumerable: true, value: []});
+    }
+
+    util.inherits(ExecutionContext, serviceMessage.ServiceMessage);
+
+    ExecutionContext.prototype.visit = function (node, message) {
+        this.steps.push({node: node.name, message: message || 'visited'});
+    };
+
+    ExecutionContext.prototype.addError = function (message) {
+        this.errors.push(message);
+        this.isSuccess = false;
+    };
 
     function copyResponseIntoAnother(response, successorResponse) {
         response.errors = response.errors.concat(successorResponse.errors);
@@ -36,35 +57,25 @@
 
     }
 
-    function executeSuccessor(self, response, request, context, dfd, executeFn) {
-        if (response.isSuccess && self.successor) {
+    function executeSuccessor(self, executionContext, dfd, executeFn) {
+        if (executionContext.isSuccess && self.successor) {
             process.nextTick(function () {
-                q.fcall(executeFn.bind(self.successor), request, context).then(function (successorResponse) {
-
-                    if (!successorResponse instanceof self.messaging.ServiceResponse) {
-                        response = new self.messaging.ServiceResponse();
-                        response.isSuccess = false;
-                        response.errors.push("Invalid response type");
-                        return response;
-                    }
-                    copyResponseIntoAnother(response, successorResponse);
-                    dfd.resolve(response);
+                q.fcall(executeFn.bind(self.successor), executionContext).then(function (successorResponseExecutionContext) {
+                    dfd.resolve(successorResponseExecutionContext);
                 });
             });
         } else {
-            dfd.resolve(response);
+            dfd.resolve(executionContext);
         }
     }
 
-    function executeConditionBranch(branch, request, context, self, dfd) {
+    function executeConditionBranch(branch, executionContext, self, dfd) {
         process.nextTick(function () {
-            q.fcall(branch.execute.bind(branch), request, context).then(function (response) {
-                executeSuccessor(self, response, request, context, dfd, Node.prototype.execute);
+            q.fcall(branch.execute.bind(branch), executionContext).then(function (responseExecutionContext) {
+                executeSuccessor(self, responseExecutionContext, dfd, Node.prototype.execute);
             }, function (error) {
-                var response = new self.messaging.ServiceResponse();
-                response.isSuccess = false;
-                response.errors.push(error.message);
-                dfd.resolve(response);
+                executionContext.addError(error.message);
+                dfd.resolve(executionContext);
             });
         });
     }
@@ -101,17 +112,7 @@
                 }
             }
         });
-
-        var _executionContext;
-        Object.defineProperty(this, "executionContext", {
-            get: function () {
-                return _executionContext;
-            },
-            set: function (value) {
-                _executionContext = value;
-            }
-        });
-
+        
         this.messaging = serviceMessage;
         this.name = 'Node';
 
@@ -125,6 +126,7 @@
 
     };
 
+    //TODO Change this to put in execution Context
     Node.prototype.visit = function (request, action) {
         if (!_.isUndefined(this.executionContext)) {
             if (_.isUndefined(this.executionContext.steps)) {
@@ -140,49 +142,30 @@
         }
     };
 
-    Node.prototype.execute = function (request, context) {
-
-        if (this.successor) {
-            this.successor.executionContext = this.executionContext;
-        }
-
+    Node.prototype.execute = function (executionContext) {
         var response;
         var self = this;
         var dfd = q.defer();
         try {
-            this.visit(request);
-            logger.info('Executing Handle Request for correlationId ', request.correlationId || "No Correlation Id", "and Node Name", self.name);
-            q.fcall(self.handleRequest.bind(self), request, context).then(function (response) {
-                logger.info('Done Executing Handle Request for correlationId ', request.correlationId || "No Correlation Id", "and Node Name", self.name);
+            //this.visit(request);
+            logger.info('Executing Handle Request for correlationId ', executionContext.correlationId || "No Correlation Id", "and Node Name", self.name);
+            q.fcall(self.handleRequest.bind(self), executionContext).then(function (responseExecutionContext) {
+                logger.info('Done Executing Handle Request for correlationId ', executionContext.correlationId || "No Correlation Id", "and Node Name", self.name);
 
-                if (!response instanceof self.messaging.ServiceResponse) {
-                    response = new self.messaging.ServiceResponse();
-                    response.isSuccess = false;
-                    response.errors.push("Invalid response type");
-                    dfd.resolve(response);
+                if (responseExecutionContext.errors.length > 0 && !responseExecutionContext.isCompensated) {
+                    responseExecutionContext.isSuccess = false;
+                    dfd.resolve(responseExecutionContext);
                     return;
                 }
 
-                if (response.errors.length > 0) {
-                    response.isSuccess = false;
-                    dfd.resolve(response);
-                    return;
-
-                }
-
-
-                executeSuccessor(self, response, request, context, dfd, self.successor ? self.successor.execute : null);
+                executeSuccessor(self, responseExecutionContext, dfd, self.successor ? self.successor.execute : null);
             }, function (error) {
-                response = new self.messaging.ServiceResponse();
-                response.isSuccess = false;
-                response.errors.push(error.message);
-                dfd.resolve(response);
+                executionContext.addError(error.message);
+                dfd.resolve(executionContext);
             }).done();
         } catch (e) {
-            response = new self.messaging.ServiceResponse();
-            response.isSuccess = false;
-            response.errors.push(e.message);
-            dfd.resolve(response);
+            executionContext.addError(e.message);
+            dfd.resolve(executionContext);
             return dfd.promise;
         }
         return dfd.promise;
@@ -269,40 +252,32 @@
         this.trueSuccessor = params.trueSuccessor;
         this.falseSuccessor = params.falseSuccessor;
         this.name = 'ConditionNode';
-
-        if (this.trueSuccessor) {
-            this.trueSuccessor.executionContext = this.executionContext;
-        }
-        if (this.falseSuccessor) {
-            this.falseSuccessor.executionContext = this.executionContext;
-        }
-
     };
 
 
-    ConditionNode.prototype.execute = function (request, context) {
+    ConditionNode.prototype.execute = function (executionContext) {
         var dfd = q.defer();
         var self = this;
-        this.visit(request, "Entering Condition");
-        logger.info('Evaluating condition for correlationId ', request.correlationId || "No Correlation Id", "and Node Name", self.name);
-        q.fcall(self.condition.bind(self), {request: request, context: context}).then(function (conditionResult) {
+        //this.visit(request, "Entering Condition");
+        logger.info('Evaluating condition for correlationId ', executionContext.correlationId || "No Correlation Id", "and Node Name", self.name);
+        q.fcall(self.condition.bind(self), executionContext).then(function (conditionResult) {
+            //TODO check if conditionResult contains isTrue
             if (conditionResult) {
-                self.visit(request, "Condition evaluated to true");
-                logger.info('Executing true Branch for correlationId ', request.correlationId || "No Correlation Id", "and Node Name", self.name);
-                executeConditionBranch.call(self, self.trueSuccessor, request, context, self, dfd);
+                //self.visit(request, "Condition evaluated to true");
+                logger.info('Executing true Branch for correlationId ', executionContext.correlationId || "No Correlation Id", "and Node Name", self.name);
+                executeConditionBranch.call(self, self.trueSuccessor, executionContext, self, dfd);
             } else {
-                self.visit(request, "Condition evaluated to false");
+                //self.visit(request, "Condition evaluated to false");
                 if (self.falseSuccessor) {
-                    logger.info('Executing false Branch for correlationId ', request.correlationId || "No Correlation Id", "and Node Name", self.name);
-                    executeConditionBranch.call(self, self.falseSuccessor, request, context, self, dfd);
+                    logger.info('Executing false Branch for correlationId ', executionContext.correlationId || "No Correlation Id", "and Node Name", self.name);
+                    executeConditionBranch.call(self, self.falseSuccessor, executionContext, self, dfd);
                 } else {
                     if (self.successor) {
-                        ConditionNode.super_.prototype.execute.call(self.successor, request, context).then(function (successorResponse) {
-                            dfd.resolve(successorResponse);
+                        ConditionNode.super_.prototype.execute.call(self.successor, executionContext).then(function (successorExecutionContext) {
+                            dfd.resolve(successorExecutionContext);
                         });
                     } else {
-                        var response = new self.messaging.ServiceResponse();
-                        dfd.resolve(response);
+                        dfd.resolve(executionContext);
                     }
                 }
             }
@@ -354,57 +329,36 @@
         this.startNode = params.startNode;
         this.compensationNode = params.compensationNode;
         this.name = 'Compensated Node';
-
-        if (this.startNode) {
-            this.startNode.executionContext = this.executionContext;
-        }
-
-        if (this.compensationNode) {
-            this.compensationNode.executionContext = this.executionContext;
-        }
     };
 
-    CompensatedNode.prototype.execute = function (request, context) {
+    CompensatedNode.prototype.execute = function (executionContext) {
 
         var dfd = q.defer();
         var self = this;
 
         process.nextTick(function () {
-            self.visit(request, "Executing Compensatable path");
-            logger.info('Executing Compensatable path for correlationId ', request.correlationId || "No Correlation Id", "and Node Name", self.name);
-            q.fcall(self.startNode.execute.bind(self.startNode), request, context).then(function (response) {
-                logger.info('Execution of Compensatable path completed for correlationId ', request.correlationId || "No Correlation Id", "and Node Name", self.name);
+            //self.visit(request, "Executing Compensatable path");
+            logger.info('Executing Compensatable path for correlationId ', executionContext.correlationId || "No Correlation Id", "and Node Name", self.name);
+            q.fcall(self.startNode.execute.bind(self.startNode), executionContext).then(function (responseExecutionContext) {
+                logger.info('Execution of Compensatable path completed for correlationId ', executionContext.correlationId || "No Correlation Id", "and Node Name", self.name);
 
-                if (!response instanceof self.messaging.ServiceResponse) {
-                    response = new self.messaging.ServiceResponse();
-                    response.isSuccess = false;
-                    response.errors.push("Invalid response type");
-                    dfd.resolve(response);
-                    return;
-                }
-
-                if (response.isSuccess) {
+                if (responseExecutionContext.isSuccess) {
                     //execute successor.... everything is good, let's move on
-                    executeSuccessor(self, response, request, context, dfd, self.successor ? self.successor.execute : null);
+                    executeSuccessor(self, responseExecutionContext, dfd, self.successor ? self.successor.execute : null);
                 } else {
                     //we need to execute the compensation branch and then let bubble up the chain
                     process.nextTick(function () {
-                        self.visit(request, "Entered Compensation");
-                        logger.info('Executing Compensation path for correlationId ', request.correlationId || "No Correlation Id", "and Node Name", self.name);
-                        q.fcall(self.compensationNode.execute.bind(self.compensationNode), request, context).then(function (compensationResponse) {
-                            logger.info('Execution of Compensation path completed for correlationId ', request.correlationId || "No Correlation Id", "and Node Name", self.name);
+                        //self.visit(request, "Entered Compensation");
+                        logger.info('Executing Compensation path for correlationId ', executionContext.correlationId || "No Correlation Id", "and Node Name", self.name);
+                        responseExecutionContext.isSuccess = true;
+                        responseExecutionContext.isCompensated = true;
+                        q.fcall(self.compensationNode.execute.bind(self.compensationNode), responseExecutionContext).then(function (compensationResponseExecutionContext) {
+                            logger.info('Execution of Compensation path completed for correlationId ', executionContext.correlationId || "No Correlation Id", "and Node Name", self.name);
 
-                            if (!compensationResponse instanceof self.messaging.ServiceResponse) {
-                                compensationResponse = new self.messaging.ServiceResponse();
-                                compensationResponse.isSuccess = false;
-                                compensationResponse.errors.push("Invalid response type");
-                                dfd.resolve(compensationResponse);
-                                return;
-                            }
 
-                            copyResponseIntoAnother(response, compensationResponse);
+                            //copyResponseIntoAnother(responseExecutionContext, compensationResponse);
 
-                            dfd.resolve(response);
+                            dfd.resolve(compensationResponseExecutionContext);
                         });
                     });
 
@@ -462,22 +416,18 @@
         this.startNode = params.startNode;
         this.name = 'Loop Node';
 
-        if (this.startNode) {
-            this.startNode.executionContext = this.executionContext;
-        }
-
-        if (this.successor) {
-            this.successor.executionContext = this.executionContext;
-        }
-
     };
 
-    LoopNode.prototype.execute = function (request, context) {
+    LoopNode.prototype.execute = function (executionContext) {
         var self = this;
         var dfd = q.defer();
-        this.visit(request);
-        self.loopWhile(request, context).then(function (response) {
-            executeSuccessor(self, response, request, context, dfd, self.successor ? self.successor.execute : null);
+        //this.visit(request);
+        self.loopWhile(executionContext).then(function (responseExecutionContext) {
+            if(responseExecutionContext.isCompensated) {
+                dfd.resolve(responseExecutionContext);
+                return;
+            }
+            executeSuccessor(self, responseExecutionContext, dfd, self.successor ? self.successor.execute : null);
         }, function (error) {
 
         }).done();
@@ -487,38 +437,44 @@
     };
 
 
-    LoopNode.prototype.loopWhile = function (request, context) {
+    LoopNode.prototype.loopWhile = function (executionContext) {
         var self = this;
         var dfd = q.defer();
 
-        var response = new self.messaging.ServiceResponse();
-
-        function loop(loopResponse) {
+        function loop(loopExecutionContext) {
             // When the result of calling `condition` is no longer true, we are
             // done.
-            logger.info('Evaluating condition for correlationId ', request.correlationId || "No Correlation Id", "and Node Name", self.name);
-            q.fcall(self.condition.bind(self), {request: request, context: context}).then(function (conditionResult) {
+            logger.info('Evaluating condition for correlationId ', executionContext.correlationId || "No Correlation Id", "and Node Name", self.name);
+
+            if(loopExecutionContext.isCompensated) {
+                dfd.resolve(loopExecutionContext);
+                return;
+            }
+
+            q.fcall(self.condition.bind(self), executionContext).then(function (conditionResult) {
+
+                //TODO Check if the response is containing isTrue, otherwise, use the result directly (this is necessary to integrate with rule engine)
 
                 if (conditionResult) {
-                    self.visit(request, "loop evaluated with condition true");
-                    logger.info('Entering loop for correlationId ', request.correlationId || "No Correlation Id", "and Node Name", self.name);
-                    q.fcall(self.startNode.execute.bind(self.startNode), request, context).then(function (innerLoopResponse) {
-                        copyResponseIntoAnother(loopResponse, innerLoopResponse);
-                        if (innerLoopResponse.isSuccess) {
-                            loop(loopResponse);
+                    //self.visit(request, "loop evaluated with condition true");
+                    logger.info('Entering loop for correlationId ', executionContext.correlationId || "No Correlation Id", "and Node Name", self.name);
+                    q.fcall(self.startNode.execute.bind(self.startNode), executionContext).then(function (innerLoopEvaluationContext) {
+                        //copyResponseIntoAnother(loopExecutionContext, innerLoopEvaluationContext);
+                        if (innerLoopEvaluationContext.isSuccess) {
+                            loop(loopExecutionContext);
                         } else {
                             //When any of the successor within the loop returns an error, we exit the loop
-                            return dfd.resolve(loopResponse);
+                            return dfd.resolve(loopExecutionContext);
                         }
                     }, function (error) {
                         return dfd.reject(error);
                     });
                 }
                 else {
-                    self.visit(request, "Exiting loop with condition false");
-                    logger.info('Exiting loop for correlationId ', request.correlationId || "No Correlation Id", "and Node Name", self.name);
+                    //self.visit(request, "Exiting loop with condition false");
+                    logger.info('Exiting loop for correlationId ', executionContext.correlationId || "No Correlation Id", "and Node Name", self.name);
 
-                    return dfd.resolve(loopResponse);
+                    return dfd.resolve(loopExecutionContext);
                 }
 
             }, function (error) {
@@ -530,7 +486,7 @@
         // completely async. It would be unexpected if `startNode` was called
         // synchronously the first time.
         process.nextTick(function () {
-            loop(response);
+            loop(executionContext);
         });
 
         // The promise
@@ -705,8 +661,6 @@
         });
 
         this.processorResolver = processorResolver;
-        this.executionContext = {steps: []};
-
 
         return this
     }
@@ -728,9 +682,6 @@
             params.startNode = process.startNode;
             params.compensationNode = process.compensationNode;
 
-            params.startNode.executionContext = self.executionContext;
-            params.compensationNode.executionContext = self.executionContext;
-
             Processor.super_.prototype.initialize.call(self, params);
             dfd.resolve();
         });
@@ -739,17 +690,19 @@
 
     Processor.prototype.execute = function (request) {
 
-        if (!(request instanceof this.messaging.ServiceMessage)) {
-            logger.error("Request should be of ServiceMessage type");
-            throw Error("Request should be of ServiceMessage type");
+
+        var executionContext = new ExecutionContext({request: request});
+
+        if ((request instanceof this.messaging.ServiceMessage)) {
+            executionContext.correlationId = executionContext.correlationId;
+        } else {
+            executionContext.SetCorrelationId();
         }
 
-        this.executionContext.steps = [];
-        var context = {};
         var dfd = q.defer();
-        Processor.super_.prototype.execute.call(this, request, context).then(function (response) {
-            response.data = context;
-            dfd.resolve(response);
+        Processor.super_.prototype.execute.call(this, executionContext).then(function (responseExecutionContext) {
+            if(responseExecutionContext.isCompensated) responseExecutionContext.isSuccess = false;
+            dfd.resolve(responseExecutionContext);
         });
         return dfd.promise;
     };
@@ -778,6 +731,7 @@
     exports.NodeFactory = NodeFactory;
     exports.LoopNode = LoopNode;
     exports.NoOpTaskNode = NoOpTaskNode;
+    exports.ExecutionContext = ExecutionContext;
 
     Injector.setBasePath(__dirname);
     Injector

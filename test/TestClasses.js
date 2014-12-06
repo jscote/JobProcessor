@@ -14,13 +14,12 @@
 
     util.inherits(TestTaskNode, base.TaskNode);
 
-    TestTaskNode.prototype.handleRequest = function (request, context) {
+    TestTaskNode.prototype.handleRequest = function (context) {
         var dfd = q.defer();
         var self = this;
 
         process.nextTick(function () {
 
-            var response = new self.messaging.ServiceResponse();
             try {
                 if (!Array.isArray(context.data)) context.data = [];
                 context.data.push("executed 1");
@@ -29,10 +28,10 @@
             }
 
 
-            request.data.push("request data 1");
+            context.request.data.push("request data 1");
 
 
-            dfd.resolve(response);
+            dfd.resolve(context);
         });
 
 
@@ -47,15 +46,14 @@
 
     util.inherits(Test2TaskNode, base.TaskNode);
 
-    Test2TaskNode.prototype.handleRequest = function (request, context) {
-        var response = new this.messaging.ServiceResponse();
+    Test2TaskNode.prototype.handleRequest = function (context) {
 
         if (!Array.isArray(context.data)) context.data = [];
         context.data.push("executed 2");
 
-        request.data.push("request data 2");
+        context.request.data.push("request data 2");
 
-        return response;
+        return context;
 
     };
 
@@ -66,15 +64,14 @@
 
     util.inherits(Test3TaskNode, base.TaskNode);
 
-    Test3TaskNode.prototype.handleRequest = function (request, context) {
-        var response = new this.messaging.ServiceResponse();
+    Test3TaskNode.prototype.handleRequest = function (context) {
 
         if (!Array.isArray(context.data)) context.data = [];
         context.data.push("executed 3");
 
-        request.data.push("request data 3");
+        context.request.data.push("request data 3");
 
-        return response;
+        return context;
 
     };
 
@@ -85,7 +82,7 @@
 
     util.inherits(Test4TaskNode, base.TaskNode);
 
-    Test4TaskNode.prototype.handleRequest = function (request, context) {
+    Test4TaskNode.prototype.handleRequest = function (context) {
         var dfd = q.defer();
         var self = this;
 
@@ -94,7 +91,7 @@
             try {
                 throw Error("Test Error");
 
-                request.data.push("request data 4");
+                context.request.data.push("request data 4");
             }
             catch (e) {
                 dfd.reject(e);
@@ -118,15 +115,14 @@
 
     util.inherits(TestLoopTaskNode, base.TaskNode);
 
-    TestLoopTaskNode.prototype.handleRequest = function (request, context) {
+    TestLoopTaskNode.prototype.handleRequest = function (context) {
 
         var self = this;
         var dfd = q.defer();
 
         process.nextTick(function () {
-            var response = new self.messaging.ServiceResponse();
 
-            request.data.index++;
+            context.request.data.index++;
 
             if (_.isUndefined(context.data.steps)) {
                 context.data.steps = [];
@@ -135,7 +131,7 @@
             if (!Array.isArray(context.data.steps)) context.data.steps = [];
             context.data.steps.push("executed in loop");
 
-            return dfd.resolve(response);
+            return dfd.resolve(context);
         });
 
         return dfd.promise;
@@ -149,13 +145,12 @@
 
     util.inherits(Test2LoopTaskNode, base.TaskNode);
 
-    Test2LoopTaskNode.prototype.handleRequest = function (request, context) {
+    Test2LoopTaskNode.prototype.handleRequest = function (context) {
 
         var self = this;
         var dfd = q.defer();
 
         process.nextTick(function () {
-            var response = new self.messaging.ServiceResponse();
 
             if (_.isUndefined(context.data.steps)) {
                 context.data.steps = [];
@@ -163,7 +158,7 @@
 
             context.data.steps.push("executed in loop 2");
 
-            return dfd.resolve(response);
+            return dfd.resolve(context);
         });
 
         return dfd.promise;
@@ -178,13 +173,12 @@
 
     util.inherits(TestPredecessorToLoopTaskNode, base.TaskNode);
 
-    TestPredecessorToLoopTaskNode.prototype.handleRequest = function (request, context) {
+    TestPredecessorToLoopTaskNode.prototype.handleRequest = function (context) {
 
         var self = this;
         var dfd = q.defer();
 
         process.nextTick(function () {
-            var response = new self.messaging.ServiceResponse();
 
             if (_.isUndefined(context.data)) context.data = {};
 
@@ -195,7 +189,7 @@
             context.data.steps.push("passed in predecessor");
 
 
-            return dfd.resolve(response);
+            return dfd.resolve(context);
         });
 
         return dfd.promise;
@@ -209,13 +203,12 @@
 
     util.inherits(TestCompensationToLoopTaskNode, base.TaskNode);
 
-    TestCompensationToLoopTaskNode.prototype.handleRequest = function (request, context) {
+    TestCompensationToLoopTaskNode.prototype.handleRequest = function (context) {
 
         var self = this;
         var dfd = q.defer();
 
         process.nextTick(function () {
-            var response = new self.messaging.ServiceResponse();
 
             if (_.isUndefined(context.data.steps)) {
                 context.data.steps = [];
@@ -224,7 +217,7 @@
             context.data.steps.push("passed in compensation");
 
 
-            return dfd.resolve(response);
+            return dfd.resolve(context);
         });
 
         return dfd.promise;
@@ -239,14 +232,12 @@
 
     util.inherits(TestSuccessorToLoopTaskNode, base.TaskNode);
 
-    TestSuccessorToLoopTaskNode.prototype.handleRequest = function (request, context) {
+    TestSuccessorToLoopTaskNode.prototype.handleRequest = function (context) {
 
         var self = this;
         var dfd = q.defer();
 
         process.nextTick(function () {
-            var response = new self.messaging.ServiceResponse();
-
             if (_.isUndefined(context.data.steps)) {
                 context.data.steps = [];
             }
@@ -254,7 +245,7 @@
             context.data.steps.push("passed in successor");
 
 
-            return dfd.resolve(response);
+            return dfd.resolve(context);
         });
 
         return dfd.promise;
