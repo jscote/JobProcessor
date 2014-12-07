@@ -1,6 +1,6 @@
 {
   "name": "jsai-jobprocessor",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Job Processor and Task Framework",
   "author": {
     "name": "Jean-Sebastien Cote",
