@@ -1241,7 +1241,7 @@ module.exports = {
             });
         });
     },
-    t43estCanExecuteComplexProcessorWithLoopWithRuleEngine: function (test) {
+    t44estCanExecuteComplexProcessorWithLoopWithRuleEngine: function (test) {
 
         Processor.getProcessor('testProcessorWithLoopInRuleEngine').then(function (processor) {
 
@@ -1266,6 +1266,103 @@ module.exports = {
 
                     test.ok(response.errors.length == 0, "Errors doesn't have expected number of items");
                     test.ok(response.isSuccess == true, "isSuccess should be false");
+                } catch (e) {
+                    test.ok(false, "Error while executing");
+                    console.log(e.message);
+                }
+
+
+                test.done();
+            });
+        });
+    },
+    t45estCanExecuteComplexProcessorWithLoopWithRuleEngineAndFalseConditiond: function (test) {
+
+        Processor.getProcessor('testProcessorWithLoopInRuleEngine').then(function (processor) {
+
+            var request = new processor.messaging.ServiceMessage();
+
+            request.person = new Person(30, 'M', "Married");
+            request.data.index = 0;
+
+            processor.execute(request).then(function (response) {
+                var p = processor;
+                try {
+                    test.ok(response.data.steps.length == 2, "Unexpected response items");
+                    test.ok(response.data.steps[0] == "passed in predecessor");
+                    test.ok(response.data.steps[1] == "passed in successor");
+
+                    test.ok(request.data.index == 0, 'Index is not correct');
+                    console.log(request.data.index);
+
+                    test.ok(response.errors.length == 0, "Errors doesn't have expected number of items");
+                    test.ok(response.isSuccess == true, "isSuccess should be false");
+                } catch (e) {
+                    test.ok(false, "Error while executing");
+                    console.log(e.message);
+                }
+
+
+                test.done();
+            });
+        });
+    },
+    t46estCanExecuteComplexProcessorWithLoopWithRuleEngineAndFalseConditionWillLoopOnce: function (test) {
+
+        Processor.getProcessor('testProcessorWithLoopInRuleEngine').then(function (processor) {
+
+            var request = new processor.messaging.ServiceMessage();
+
+            request.person = new Person(30, 'F', "Married");
+            request.data.changeAge = true;
+            request.data.index = 0;
+
+            processor.execute(request).then(function (response) {
+                var p = processor;
+                try {
+                    test.ok(response.data.steps.length == 4, "Unexpected response items");
+                    test.ok(response.data.steps[0] == "passed in predecessor");
+                    test.ok(response.data.steps[1] == "executed in loop");
+                    test.ok(response.data.steps[2] == "executed in loop 2");
+                    test.ok(response.data.steps[3] == "passed in successor");
+
+                    test.ok(request.data.index == 1, 'Index is not correct');
+                    console.log(request.data.index);
+
+                    test.ok(response.errors.length == 0, "Errors doesn't have expected number of items");
+                    test.ok(response.isSuccess == true, "isSuccess should be false");
+                } catch (e) {
+                    test.ok(false, "Error while executing");
+                    console.log(e.message);
+                }
+
+
+                test.done();
+            });
+        });
+    },
+    t47estCanExecuteComplexProcessorWithLoopWithRuleEngineAndError: function (test) {
+
+        Processor.getProcessor('testProcessorWithLoopInRuleEngineAndError').then(function (processor) {
+
+            var request = new processor.messaging.ServiceMessage();
+
+            request.person = new Person(30, 'F', "Married");
+            request.data.index = 0;
+
+            processor.execute(request).then(function (response) {
+                var p = processor;
+                try {
+                    test.ok(response.data.steps.length == 2, "Unexpected response items");
+                    test.ok(response.data.steps[0] == "passed in predecessor");
+                    test.ok(response.data.steps[1] == "passed in successor");
+
+                    test.ok(request.data.index == 0, 'Index is not correct');
+                    console.log(request.data.index);
+
+                    test.ok(response.errors.length == 0, "Errors doesn't have expected number of items");
+                    test.ok(response.isSuccess == true, "isSuccess should be false");
+                    test.ok(response.isCompensated == false, "Should be compensated");
                 } catch (e) {
                     test.ok(false, "Error while executing");
                     console.log(e.message);

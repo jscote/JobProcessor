@@ -128,6 +128,10 @@
                 context.data.steps = [];
             }
 
+            if(!_.isUndefined(context.request.person) && !_.isUndefined(context.request.data.changeAge) && context.request.data.changeAge == true) {
+                context.request.person.age = 60;
+            }
+
             if (!Array.isArray(context.data.steps)) context.data.steps = [];
             context.data.steps.push("executed in loop");
 
