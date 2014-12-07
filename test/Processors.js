@@ -14,7 +14,16 @@ var ConditionNode = require('../Processor').ConditionNode;
 var LoopNode = require('../Processor').LoopNode;
 var ExecutionContext = require('../Processor').ExecutionContext;
 
+var RuleEngine = require('jsai-ruleengine/RuleEvaluator').RuleEngine;
+
 Processor.config({processorPath: p.resolve(__dirname + '/../SampleProcessors/')});
+RuleEngine.config({ruleSetPath: p.resolve(__dirname + '/../SampleRules/'), rulePath: p.resolve(__dirname + '/../SampleRules/')});
+
+var Person = function (age, gender, maritalStatus) {
+    this.age = age;
+    this.gender = gender;
+    this.maritalStatus = maritalStatus
+};
 
 module.exports = {
     setUp: function (callback) {
@@ -36,7 +45,7 @@ module.exports = {
             .register({
                 dependency: '/TestClasses::TestCompensationToLoopTaskNode',
                 name: 'TestCompensationToLoopTaskNode'
-            })
+            });
         callback();
     },
     tearDown: function (callback) {
@@ -1201,10 +1210,77 @@ module.exports = {
             });
         });
     },
+    t43estCanExecuteComplexProcessorWithRuleEngine: function (test) {
+
+        Processor.getProcessor('testProcessorWithRuleEngine').then(function (processor) {
+
+            var request = new processor.messaging.ServiceMessage();
+
+            request.person = new Person(30, 'F', "Married");
+
+            processor.execute(request).then(function (response) {
+                var p = processor;
+                try {
+                    test.ok(response.data.steps.length == 4, "Unexpected response items");
+                    test.ok(response.data.steps[0] == "passed in predecessor");
+                    test.ok(response.data.steps[1] == "executed in loop");
+                    test.ok(response.data.steps[2] == "executed in loop 2");
+                    test.ok(response.data.steps[3] == "passed in successor");
+
+
+
+                    test.ok(response.errors.length == 0, "Errors doesn't have expected number of items");
+                    test.ok(response.isSuccess == true, "isSuccess should be false");
+                } catch (e) {
+                    test.ok(false, "Error while executing");
+                    console.log(e.message);
+                }
+
+
+                test.done();
+            });
+        });
+    },
+    t43estCanExecuteComplexProcessorWithLoopWithRuleEngine: function (test) {
+
+        Processor.getProcessor('testProcessorWithLoopInRuleEngine').then(function (processor) {
+
+            var request = new processor.messaging.ServiceMessage();
+
+            request.person = new Person(30, 'F', "Married");
+            request.data.index = 0;
+
+            processor.execute(request).then(function (response) {
+                var p = processor;
+                try {
+                    test.ok(response.data.steps.length == 6, "Unexpected response items");
+                    test.ok(response.data.steps[0] == "passed in predecessor");
+                    test.ok(response.data.steps[1] == "executed in loop");
+                    test.ok(response.data.steps[2] == "executed in loop 2");
+                    test.ok(response.data.steps[3] == "executed in loop");
+                    test.ok(response.data.steps[4] == "executed in loop 2");
+                    test.ok(response.data.steps[5] == "passed in successor");
+
+                    test.ok(request.data.index == 2, 'Index is not correct');
+                    console.log(request.data.index);
+
+                    test.ok(response.errors.length == 0, "Errors doesn't have expected number of items");
+                    test.ok(response.isSuccess == true, "isSuccess should be false");
+                } catch (e) {
+                    test.ok(false, "Error while executing");
+                    console.log(e.message);
+                }
+
+
+                test.done();
+            });
+        });
+    },
+
     t42estLoad: function (test) {
 
         var promises = [];
-        for (var i = 0; i < 1000; i++) {
+        for (var i = 0; i < 100; i++) {
             Processor.getProcessor("testProcessor").then(function (processor) {
                 var request = new processor.messaging.ServiceMessage();
                 request.setCorrelationId();

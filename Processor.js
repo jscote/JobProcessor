@@ -1,7 +1,7 @@
 /**
  * Created by jean-sebastiencote on 11/1/14.
  */
-(function (util, _, q, process, log4js, Injector, serviceMessage) {
+(function (util, _, q, process, log4js, Injector, serviceMessage, ruleEngineModule) {
 
     'use strict';
     /*
@@ -24,6 +24,7 @@
 
 
     Injector.register({dependency: serviceMessage, name: 'serviceMessage'});
+    var ruleEngine = Injector.resolve({target: 'ruleEngine'});
 
 
     var logger = log4js.getLogger();
@@ -194,6 +195,34 @@
         TaskNode.super_.prototype.initialize.call(this, params);
     };
 
+    var evaluateCondition = function (condition, executionContext) {
+        var dfd = q.defer();
+        if (_.isFunction(condition)) {
+            q.fcall(condition, executionContext).then(function (conditionResult) {
+                dfd.resolve(conditionResult);
+            }).fail(function () {
+                dfd.resolve(false);
+            });
+        }
+
+        if (_.isArray(condition) || _.isString(condition)) {
+            var ruleSets = [];
+            if (_.isString(condition)) {
+                ruleSets.push(condition);
+            } else {
+                ruleSets = condition;
+            }
+
+            ruleEngine.evaluate(executionContext, ruleSets).then(function (conditionResult) {
+                dfd.resolve(conditionResult.isTrue);
+            }).fail(function(){
+                dfd.resolve(false);
+            });
+        }
+
+        return dfd.promise;
+    };
+
 
     function ConditionNode(serviceMessage) {
         Node.call(this, serviceMessage);
@@ -258,13 +287,11 @@
         this.name = 'ConditionNode';
     };
 
-
     ConditionNode.prototype.execute = function (executionContext) {
         var dfd = q.defer();
         var self = this;
         executionContext.visiting(self, 'Evaluating Condition', 'Evaluating Condition');
-        q.fcall(self.condition.bind(self), executionContext).then(function (conditionResult) {
-            //TODO check if conditionResult contains isTrue
+        q.fcall(evaluateCondition, self.condition, executionContext).then(function (conditionResult) {
             if (conditionResult) {
                 executionContext.visiting(self, 'Condition Evaluated true', 'Condition');
                 executionContext.visiting(self, '', 'Executing True Branch');
@@ -449,7 +476,7 @@
                 return;
             }
 
-            q.fcall(self.condition.bind(self), executionContext).then(function (conditionResult) {
+            q.fcall(evaluateCondition, self.condition, executionContext).then(function (conditionResult) {
 
                 //TODO Check if the response is containing isTrue, otherwise, use the result directly (this is necessary to integrate with rule engine)
 
@@ -601,8 +628,6 @@
         }
 
 
-
-
         function internalParse(innerDefinition) {
             var nodeType = '';
             var parameters = null;
@@ -634,6 +659,7 @@
 
             return NodeFactory.create(nodeType, inner);
         }
+
         var materializedDefinition = {};
         materializedDefinition = internalParse(processorDefinition);
         materializedDefinition.version = processorDefinition.version;
@@ -732,7 +758,7 @@
     Processor.Count = 0;
 
     var engineConfig = {};
-    Processor.config = function(config){
+    Processor.config = function (config) {
         engineConfig.processorPath = config.processorPath;
     };
 
@@ -781,5 +807,6 @@
     process,
     require('log4js'),
     require('jsai-injector'),
-    require('jsai-servicemessage')
+    require('jsai-servicemessage'),
+    require('jsai-ruleengine/RuleEvaluator')
 );
