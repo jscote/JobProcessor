@@ -678,7 +678,8 @@
 
             }
 
-            return NodeFactory.create(nodeType, inner);
+            var node = NodeFactory.create(nodeType, inner);
+            return node;
         }
 
         var materializedDefinition = {};

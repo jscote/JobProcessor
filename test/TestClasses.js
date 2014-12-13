@@ -256,6 +256,27 @@
 
     };
 
+    function TestRequestCancellationTaskNode(serviceMessage) {
+        base.TaskNode.call(this, serviceMessage);
+        this.name = 'TestSuccessorToLoopTaskNode';
+    }
+
+    util.inherits(TestRequestCancellationTaskNode, base.TaskNode);
+
+    TestRequestCancellationTaskNode.prototype.handleRequest = function (context) {
+
+        var self = this;
+        var dfd = q.defer();
+
+        process.nextTick(function () {
+            context.requestCancellation();
+            return dfd.resolve(context);
+        });
+
+        return dfd.promise;
+
+    };
+
 
     module.exports.TestTaskNode = TestTaskNode;
     module.exports.Test2TaskNode = Test2TaskNode;
@@ -266,6 +287,7 @@
     module.exports.TestPredecessorToLoopTaskNode = TestPredecessorToLoopTaskNode;
     module.exports.TestSuccessorToLoopTaskNode = TestSuccessorToLoopTaskNode;
     module.exports.TestCompensationToLoopTaskNode = TestCompensationToLoopTaskNode;
+    module.exports.TestRequestCancellationTaskNode = TestRequestCancellationTaskNode;
 
 })(
     require('lodash'),

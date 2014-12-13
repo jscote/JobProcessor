@@ -37,6 +37,7 @@ module.exports = {
             .register({dependency: '/TestClasses::Test4TaskNode', name: 'Test4TaskNode'})
             .register({dependency: '/TestClasses::TestLoopTaskNode', name: 'TestLoopTaskNode'})
             .register({dependency: '/TestClasses::Test2LoopTaskNode', name: 'Test2LoopTaskNode'})
+            .register({dependency: '/TestClasses::TestRequestCancellationTaskNode', name: 'TestRequestCancellationTaskNode'})
             .register({
                 dependency: '/TestClasses::TestPredecessorToLoopTaskNode',
                 name: 'TestPredecessorToLoopTaskNode'
@@ -1363,6 +1364,37 @@ module.exports = {
                     test.ok(response.errors.length == 0, "Errors doesn't have expected number of items");
                     test.ok(response.isSuccess == true, "isSuccess should be false");
                     test.ok(response.isCompensated == false, "Should be compensated");
+                } catch (e) {
+                    test.ok(false, "Error while executing");
+                    console.log(e.message);
+                }
+
+
+                test.done();
+            });
+        });
+    },
+    testCanExecuteComplexProcessorWithCancellation: function (test) {
+
+        Processor.getProcessor('testProcessorWithCancellation').then(function (processor) {
+
+            var request = new processor.messaging.ServiceMessage();
+
+            request.data = {index: 0};
+
+            processor.execute(request).then(function (response) {
+                var p = processor;
+                try {
+                    test.ok(response.data.steps.length == 3, "Unexpected response items");
+                    test.ok(response.data.steps[0] == "passed in predecessor");
+                    test.ok(response.data.steps[1] == "executed in loop");
+                    test.ok(response.data.steps[2] == "executed in loop 2");
+
+                    test.ok(request.data.index == 1, "Index is expected to be 1");
+
+
+                    test.ok(response.errors.length == 0, "Errors doesn't have expected number of items");
+                    test.ok(response.isSuccess == true, "isSuccess should be false");
                 } catch (e) {
                     test.ok(false, "Error while executing");
                     console.log(e.message);
