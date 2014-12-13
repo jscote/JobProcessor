@@ -40,6 +40,7 @@
         Object.defineProperty(this, 'isCompensated', {writable: true, enumerable: true, value: false});
         Object.defineProperty(this, 'errors', {writable: true, enumerable: true, value: []});
         Object.defineProperty(this, 'trackingEnabled', {writable: true, enumerable: true, value: true});
+        Object.defineProperty(this, 'isCancellationRequested', {writable: true, enumerable: true, value: false});
         Object.defineProperty(this, 'version', {writable: true, enumerable: true, value: options.version || '0.1'});
         Object.defineProperty(this, 'processorName', {
             writable: true,
@@ -50,6 +51,10 @@
     }
 
     util.inherits(ExecutionContext, serviceMessage.ServiceMessage);
+
+    ExecutionContext.prototype.requestCancellation = function() {
+        this.isCancellationRequested = true;
+    };
 
     ExecutionContext.prototype.visiting = function (node, message, action) {
 
@@ -81,7 +86,7 @@
     };
 
     function executeSuccessor(self, executionContext, dfd, executeFn) {
-        if (executionContext.isSuccess && self.successor) {
+        if (executionContext.isSuccess && self.successor && !executionContext.isCancellationRequested) {
             process.nextTick(function () {
                 q.fcall(executeFn.bind(self.successor), executionContext).then(function (successorResponseExecutionContext) {
                     dfd.resolve(successorResponseExecutionContext);
@@ -94,12 +99,16 @@
 
     function executeConditionBranch(branch, executionContext, self, dfd) {
         process.nextTick(function () {
-            q.fcall(branch.execute.bind(branch), executionContext).then(function (responseExecutionContext) {
-                executeSuccessor(self, responseExecutionContext, dfd, Node.prototype.execute);
-            }, function (error) {
-                executionContext.addError(error.message);
+            if(executionContext.isCancellationRequested) {
                 dfd.resolve(executionContext);
-            });
+            } else {
+                q.fcall(branch.execute.bind(branch), executionContext).then(function (responseExecutionContext) {
+                    executeSuccessor(self, responseExecutionContext, dfd, Node.prototype.execute);
+                }, function (error) {
+                    executionContext.addError(error.message);
+                    dfd.resolve(executionContext);
+                });
+            }
         });
     }
 
@@ -291,27 +300,31 @@
         var dfd = q.defer();
         var self = this;
         executionContext.visiting(self, 'Evaluating Condition', 'Evaluating Condition');
-        q.fcall(evaluateCondition, self.condition, executionContext).then(function (conditionResult) {
-            if (conditionResult) {
-                executionContext.visiting(self, 'Condition Evaluated true', 'Condition');
-                executionContext.visiting(self, '', 'Executing True Branch');
-                executeConditionBranch.call(self, self.trueSuccessor, executionContext, self, dfd);
-            } else {
-                executionContext.visiting(self, 'Condition Evaluated false', 'Condition');
-                if (self.falseSuccessor) {
-                    executionContext.visiting(self, '', 'Executing False Branch');
-                    executeConditionBranch.call(self, self.falseSuccessor, executionContext, self, dfd);
+        if(executionContext.isCancellationRequested) {
+            dfd.resolve(executionContext);
+        } else {
+            q.fcall(evaluateCondition, self.condition, executionContext).then(function (conditionResult) {
+                if (conditionResult) {
+                    executionContext.visiting(self, 'Condition Evaluated true', 'Condition');
+                    executionContext.visiting(self, '', 'Executing True Branch');
+                    executeConditionBranch.call(self, self.trueSuccessor, executionContext, self, dfd);
                 } else {
-                    if (self.successor) {
-                        ConditionNode.super_.prototype.execute.call(self.successor, executionContext).then(function (successorExecutionContext) {
-                            dfd.resolve(successorExecutionContext);
-                        });
+                    executionContext.visiting(self, 'Condition Evaluated false', 'Condition');
+                    if (self.falseSuccessor) {
+                        executionContext.visiting(self, '', 'Executing False Branch');
+                        executeConditionBranch.call(self, self.falseSuccessor, executionContext, self, dfd);
                     } else {
-                        dfd.resolve(executionContext);
+                        if (self.successor) {
+                            ConditionNode.super_.prototype.execute.call(self.successor, executionContext).then(function (successorExecutionContext) {
+                                dfd.resolve(successorExecutionContext);
+                            });
+                        } else {
+                            dfd.resolve(executionContext);
+                        }
                     }
                 }
-            }
-        });
+            });
+        }
         return dfd.promise;
     };
 
@@ -368,27 +381,31 @@
 
         process.nextTick(function () {
             executionContext.visiting(self, 'Executing standard path', 'Executing Compensatable');
-            q.fcall(self.startNode.execute.bind(self.startNode), executionContext).then(function (responseExecutionContext) {
-                executionContext.visited(self, 'Standard path Completed', 'Compensatable Executed');
+            if(executionContext.isCancellationRequested) {
+                dfd.resolve(executionContext);
+            } else {
+                q.fcall(self.startNode.execute.bind(self.startNode), executionContext).then(function (responseExecutionContext) {
+                    executionContext.visited(self, 'Standard path Completed', 'Compensatable Executed');
 
-                if (responseExecutionContext.isSuccess) {
-                    //execute successor.... everything is good, let's move on
-                    executeSuccessor(self, responseExecutionContext, dfd, self.successor ? self.successor.execute : null);
-                } else {
-                    //we need to execute the compensation branch and then let bubble up the chain
-                    process.nextTick(function () {
-                        executionContext.visiting(self, 'Executing Compensation path', 'Executing Compensation');
-                        responseExecutionContext.isSuccess = true;
-                        responseExecutionContext.isCompensated = true;
-                        q.fcall(self.compensationNode.execute.bind(self.compensationNode), responseExecutionContext).then(function (compensationResponseExecutionContext) {
-                            executionContext.visited(self, 'Compensation path Completed', 'Compensation Executed');
+                    if (responseExecutionContext.isSuccess) {
+                        //execute successor.... everything is good, let's move on
+                        executeSuccessor(self, responseExecutionContext, dfd, self.successor ? self.successor.execute : null);
+                    } else {
+                        //we need to execute the compensation branch and then let bubble up the chain
+                        process.nextTick(function () {
+                            executionContext.visiting(self, 'Executing Compensation path', 'Executing Compensation');
+                            responseExecutionContext.isSuccess = true;
+                            responseExecutionContext.isCompensated = true;
+                            q.fcall(self.compensationNode.execute.bind(self.compensationNode), responseExecutionContext).then(function (compensationResponseExecutionContext) {
+                                executionContext.visited(self, 'Compensation path Completed', 'Compensation Executed');
 
-                            dfd.resolve(compensationResponseExecutionContext);
+                                dfd.resolve(compensationResponseExecutionContext);
+                            });
                         });
-                    });
 
-                }
-            });
+                    }
+                });
+            }
         });
 
         return dfd.promise;
@@ -481,17 +498,21 @@
                 //TODO Check if the response is containing isTrue, otherwise, use the result directly (this is necessary to integrate with rule engine)
 
                 if (conditionResult) {
-                    q.fcall(self.startNode.execute.bind(self.startNode), executionContext).then(function (innerLoopEvaluationContext) {
-                        //copyResponseIntoAnother(loopExecutionContext, innerLoopEvaluationContext);
-                        if (innerLoopEvaluationContext.isSuccess) {
-                            loop(loopExecutionContext);
-                        } else {
-                            //When any of the successor within the loop returns an error, we exit the loop
-                            return dfd.resolve(loopExecutionContext);
-                        }
-                    }, function (error) {
-                        return dfd.reject(error);
-                    });
+                    if(executionContext.isCancellationRequested) {
+                        dfd.resolve(loopExecutionContext);
+                    } else {
+                        q.fcall(self.startNode.execute.bind(self.startNode), executionContext).then(function (innerLoopEvaluationContext) {
+                            //copyResponseIntoAnother(loopExecutionContext, innerLoopEvaluationContext);
+                            if (innerLoopEvaluationContext.isSuccess) {
+                                loop(loopExecutionContext);
+                            } else {
+                                //When any of the successor within the loop returns an error, we exit the loop
+                                return dfd.resolve(loopExecutionContext);
+                            }
+                        }, function (error) {
+                            return dfd.reject(error);
+                        });
+                    }
                 }
                 else {
 
