@@ -32,13 +32,11 @@
 
     function ExecutionContext(options) {
 
-        serviceMessage.ServiceMessage.call(this, options);
+        serviceMessage.ServiceResponse.call(this, options);
 
         Object.defineProperty(this, 'request', {writable: true, enumerable: true, value: options.request});
         Object.defineProperty(this, 'steps', {writable: true, enumerable: true, value: []});
-        Object.defineProperty(this, 'isSuccess', {writable: true, enumerable: true, value: true});
         Object.defineProperty(this, 'isCompensated', {writable: true, enumerable: true, value: false});
-        Object.defineProperty(this, 'errors', {writable: true, enumerable: true, value: []});
         Object.defineProperty(this, 'trackingEnabled', {writable: true, enumerable: true, value: true});
         Object.defineProperty(this, 'isCancellationRequested', {writable: true, enumerable: true, value: false});
         Object.defineProperty(this, 'version', {writable: true, enumerable: true, value: options.version || '0.1'});
@@ -50,7 +48,7 @@
 
     }
 
-    util.inherits(ExecutionContext, serviceMessage.ServiceMessage);
+    util.inherits(ExecutionContext, serviceMessage.ServiceResponse);
 
     ExecutionContext.prototype.requestCancellation = function() {
         this.isCancellationRequested = true;
