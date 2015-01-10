@@ -4,8 +4,8 @@
 (function (_, q, util, base) {
 
     var p = require('path');
-    var ProcessorLoader = require('../Processor').ProcessorLoader;
-    var NodeFactory = require('../Processor').NodeFactory;
+    var ProcessorLoader = require('../index').ProcessorLoader;
+    var NodeFactory = require('../index').NodeFactory;
 
     function TestTaskNode(serviceMessage) {
         base.TaskNode.call(this, serviceMessage);
@@ -293,5 +293,5 @@
     require('lodash'),
     require('q'),
     require('util'),
-    require(__dirname + '../../Processor')
+    require(__dirname + '../../index')
 );

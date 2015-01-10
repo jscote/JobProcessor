@@ -7,12 +7,12 @@ var util = require('util');
 global.Injector = require('jsai-injector');
 var p = require('path');
 
-var Processor = require('../Processor').Processor;
-var NodeFactory = require('../Processor').NodeFactory;
-var TaskNode = require('../Processor').TaskNode;
-var ConditionNode = require('../Processor').ConditionNode;
-var LoopNode = require('../Processor').LoopNode;
-var ExecutionContext = require('../Processor').ExecutionContext;
+var Processor = require('../index').Processor;
+var NodeFactory = require('../index').NodeFactory;
+var TaskNode = require('../index').TaskNode;
+var ConditionNode = require('../index').ConditionNode;
+var LoopNode = require('../index').LoopNode;
+var ExecutionContext = require('../index').ExecutionContext;
 
 var RuleEngine = require('jsai-ruleengine/RuleEvaluator').RuleEngine;
 
@@ -1428,6 +1428,15 @@ module.exports = {
         q.all(promises).then(function () {
             test.ok(Processor.Count == 0);
             test.done()
+        })
+    },
+
+    testLoadInexistentProcessor: function(test) {
+        Processor.getProcessor("invalid").then(function (processor) {
+            test.ok(false, "should not be here");
+        }).fail(function(error){
+            test.ok(true, 'expected failure of loading');
+            test.done();
         })
     }
 };

@@ -568,7 +568,12 @@
         process.nextTick(function () {
             var processor;
 
-            processor = require(engineConfig.processorPath + '/' + processorName);
+            try {
+                processor = require(engineConfig.processorPath + '/' + processorName);
+            }
+            catch(error) {
+                dfd.reject("Processor doesn't exists");
+            }
 
             dfd.resolve(processor);
         });
@@ -626,9 +631,15 @@
 
             if (parsedProcessor == null) {
                 q.fcall(self.processorLoader.load, processorName).then(function (processorDefinition) {
-                    parsedProcessor = self.parseProcessorDefinition(processorDefinition);
-                    self.addToCache(processorName, parsedProcessor);
-                    dfd.resolve(parsedProcessor);
+                    try {
+                        parsedProcessor = self.parseProcessorDefinition(processorDefinition);
+                        self.addToCache(processorName, parsedProcessor);
+                        dfd.resolve(parsedProcessor);
+                    } catch (error) {
+                        dfd.reject(error);
+                    }
+                }).fail(function(error){
+                    dfd.reject(error);
                 });
 
             } else {
@@ -742,6 +753,8 @@
 
             Processor.super_.prototype.initialize.call(self, params);
             dfd.resolve();
+        }).fail(function(error){
+            dfd.reject(error);
         });
         return dfd.promise;
     };
@@ -792,6 +805,8 @@
 
             dfd.resolve(processor);
 
+        }).fail(function(error) {
+            dfd.reject(error);
         });
 
         return dfd.promise;
@@ -810,14 +825,14 @@
 
     Injector.setBasePath(__dirname);
     Injector
-        .register({dependency: '/Processor::TaskNode', name: 'TaskNode'})
-        .register({dependency: '/Processor::ConditionNode', name: 'ConditionNode'})
-        .register({dependency: '/Processor::CompensatedNode', name: 'CompensatedNode'})
-        .register({dependency: '/Processor::LoopNode', name: 'LoopNode'})
-        .register({dependency: '/Processor::Processor', name: 'Processor'})
-        .register({dependency: '/Processor::NoOpTaskNode', name: 'NoOpTaskNode'})
-        .register({dependency: '/Processor::ProcessorLoader', name: 'processorLoader'})
-        .register({dependency: '/Processor::ProcessorResolver', name: 'processorResolver'})
+        .register({dependency: '/index::TaskNode', name: 'TaskNode'})
+        .register({dependency: '/index::ConditionNode', name: 'ConditionNode'})
+        .register({dependency: '/index::CompensatedNode', name: 'CompensatedNode'})
+        .register({dependency: '/index::LoopNode', name: 'LoopNode'})
+        .register({dependency: '/index::Processor', name: 'Processor'})
+        .register({dependency: '/index::NoOpTaskNode', name: 'NoOpTaskNode'})
+        .register({dependency: '/index::ProcessorLoader', name: 'processorLoader'})
+        .register({dependency: '/index::ProcessorResolver', name: 'processorResolver'})
 
 })
 (
