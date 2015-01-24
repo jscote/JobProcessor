@@ -17,13 +17,26 @@ var ExecutionContext = require('../index').ExecutionContext;
 var RuleEngine = require('jsai-ruleengine/RuleEvaluator').RuleEngine;
 
 Processor.config({processorPath: p.resolve(__dirname + '/../SampleProcessors/')});
-RuleEngine.config({ruleSetPath: p.resolve(__dirname + '/../SampleRules/'), rulePath: p.resolve(__dirname + '/../SampleRules/')});
+RuleEngine.config({
+    ruleSetPath: p.resolve(__dirname + '/../SampleRules/'),
+    rulePath: p.resolve(__dirname + '/../SampleRules/')
+});
 
 var Person = function (age, gender, maritalStatus) {
     this.age = age;
     this.gender = gender;
     this.maritalStatus = maritalStatus
 };
+
+var msg = require('jsai-servicemessage');
+msg.configure({
+    messageCreatedHandler: function (messge) {
+        console.log('message created');
+    },
+    messageUpdatedHandler: function (messge) {
+        console.log('message updated');
+    }
+});
 
 module.exports = {
     setUp: function (callback) {
@@ -37,7 +50,10 @@ module.exports = {
             .register({dependency: '/TestClasses::Test4TaskNode', name: 'Test4TaskNode'})
             .register({dependency: '/TestClasses::TestLoopTaskNode', name: 'TestLoopTaskNode'})
             .register({dependency: '/TestClasses::Test2LoopTaskNode', name: 'Test2LoopTaskNode'})
-            .register({dependency: '/TestClasses::TestRequestCancellationTaskNode', name: 'TestRequestCancellationTaskNode'})
+            .register({
+                dependency: '/TestClasses::TestRequestCancellationTaskNode',
+                name: 'TestRequestCancellationTaskNode'
+            })
             .register({
                 dependency: '/TestClasses::TestPredecessorToLoopTaskNode',
                 name: 'TestPredecessorToLoopTaskNode'
@@ -47,6 +63,8 @@ module.exports = {
                 dependency: '/TestClasses::TestCompensationToLoopTaskNode',
                 name: 'TestCompensationToLoopTaskNode'
             });
+
+
         callback();
     },
     tearDown: function (callback) {
@@ -1229,7 +1247,6 @@ module.exports = {
                     test.ok(response.data.steps[3] == "passed in successor");
 
 
-
                     test.ok(response.errors.length == 0, "Errors doesn't have expected number of items");
                     test.ok(response.isSuccess == true, "isSuccess should be false");
                 } catch (e) {
@@ -1418,9 +1435,9 @@ module.exports = {
 
                 promises.push(processor.execute(request));
 
-                if(i%10 == 0) {
+                if (i % 10 == 0) {
                     test.ok(Processor.Count > 0, 'Count is not greater than 0');
-                 }
+                }
             });
 
         }
@@ -1431,10 +1448,10 @@ module.exports = {
         })
     },
 
-    testLoadInexistentProcessor: function(test) {
+    testLoadInexistentProcessor: function (test) {
         Processor.getProcessor("invalid").then(function (processor) {
             test.ok(false, "should not be here");
-        }).fail(function(error){
+        }).fail(function (error) {
             test.ok(true, 'expected failure of loading');
             test.done();
         })

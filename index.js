@@ -46,11 +46,13 @@
             value: options.processorName || 'unknown'
         });
 
+        this.emit('message.created', this);
+
     }
 
     util.inherits(ExecutionContext, serviceMessage.ServiceResponse);
 
-    ExecutionContext.prototype.requestCancellation = function() {
+    ExecutionContext.prototype.requestCancellation = function () {
         this.isCancellationRequested = true;
     };
 
@@ -78,10 +80,6 @@
         }
     };
 
-    ExecutionContext.prototype.addError = function (message) {
-        this.errors.push(message);
-        this.isSuccess = false;
-    };
 
     function executeSuccessor(self, executionContext, dfd, executeFn) {
         if (executionContext.isSuccess && self.successor && !executionContext.isCancellationRequested) {
@@ -97,7 +95,7 @@
 
     function executeConditionBranch(branch, executionContext, self, dfd) {
         process.nextTick(function () {
-            if(executionContext.isCancellationRequested) {
+            if (executionContext.isCancellationRequested) {
                 dfd.resolve(executionContext);
             } else {
                 q.fcall(branch.execute.bind(branch), executionContext).then(function (responseExecutionContext) {
@@ -164,7 +162,7 @@
             q.fcall(self.handleRequest.bind(self), executionContext).then(function (responseExecutionContext) {
                 executionContext.visited(self);
 
-                if (responseExecutionContext.errors.length > 0 && !responseExecutionContext.isCompensated) {
+                if (responseExecutionContext.hasErrors && !responseExecutionContext.isCompensated) {
                     responseExecutionContext.isSuccess = false;
                     dfd.resolve(responseExecutionContext);
                     return;
@@ -174,9 +172,12 @@
             }, function (error) {
                 executionContext.addError(error.message);
                 dfd.resolve(executionContext);
-            }).done();
+            }).done(function () {
+                executionContext.update();
+            });
         } catch (e) {
             executionContext.addError(e.message);
+            executionContext.update();
             dfd.resolve(executionContext);
             return dfd.promise;
         }
@@ -222,7 +223,7 @@
 
             ruleEngine.evaluate(executionContext, ruleSets).then(function (conditionResult) {
                 dfd.resolve(conditionResult.isTrue);
-            }).fail(function(){
+            }).fail(function () {
                 dfd.resolve(false);
             });
         }
@@ -298,7 +299,7 @@
         var dfd = q.defer();
         var self = this;
         executionContext.visiting(self, 'Evaluating Condition', 'Evaluating Condition');
-        if(executionContext.isCancellationRequested) {
+        if (executionContext.isCancellationRequested) {
             dfd.resolve(executionContext);
         } else {
             q.fcall(evaluateCondition, self.condition, executionContext).then(function (conditionResult) {
@@ -321,6 +322,8 @@
                         }
                     }
                 }
+            }).done(function () {
+                executionContext.update();
             });
         }
         return dfd.promise;
@@ -379,7 +382,7 @@
 
         process.nextTick(function () {
             executionContext.visiting(self, 'Executing standard path', 'Executing Compensatable');
-            if(executionContext.isCancellationRequested) {
+            if (executionContext.isCancellationRequested) {
                 dfd.resolve(executionContext);
             } else {
                 q.fcall(self.startNode.execute.bind(self.startNode), executionContext).then(function (responseExecutionContext) {
@@ -471,7 +474,9 @@
             executeSuccessor(self, responseExecutionContext, dfd, self.successor ? self.successor.execute : null);
         }, function (error) {
 
-        }).done();
+        }).done(function () {
+            executionContext.update();
+        });
 
         // The promise
         return dfd.promise;
@@ -496,7 +501,7 @@
                 //TODO Check if the response is containing isTrue, otherwise, use the result directly (this is necessary to integrate with rule engine)
 
                 if (conditionResult) {
-                    if(executionContext.isCancellationRequested) {
+                    if (executionContext.isCancellationRequested) {
                         dfd.resolve(loopExecutionContext);
                     } else {
                         q.fcall(self.startNode.execute.bind(self.startNode), executionContext).then(function (innerLoopEvaluationContext) {
@@ -519,7 +524,9 @@
 
             }, function (error) {
                 console.log("there is an error");
-            }).done();
+            }).done(function () {
+                loopExecutionContext.update();
+            });
         }
 
         // Start running the loop in the next tick so that this function is
@@ -571,7 +578,7 @@
             try {
                 processor = require(engineConfig.processorPath + '/' + processorName);
             }
-            catch(error) {
+            catch (error) {
                 dfd.reject("Processor doesn't exists");
             }
 
@@ -638,7 +645,7 @@
                     } catch (error) {
                         dfd.reject(error);
                     }
-                }).fail(function(error){
+                }).fail(function (error) {
                     dfd.reject(error);
                 });
 
@@ -753,7 +760,7 @@
 
             Processor.super_.prototype.initialize.call(self, params);
             dfd.resolve();
-        }).fail(function(error){
+        }).fail(function (error) {
             dfd.reject(error);
         });
         return dfd.promise;
@@ -805,7 +812,7 @@
 
             dfd.resolve(processor);
 
-        }).fail(function(error) {
+        }).fail(function (error) {
             dfd.reject(error);
         });
 
