@@ -9,9 +9,9 @@
   "dependencies": {
     "jsai-injector": "^0.0.2",
     "jsai-ruleengine": "0.0.5",
-    "jsai-servicemessage": "0.0.8",
+    "jsai-servicemessage": "0.0.11",
     "lodash": "^2.4.1",
-    "log4js": "^0.6.21",
+    "log4js": "^0.6.22",
     "q": "^1.1.2"
   },
   "repository": {
