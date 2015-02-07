@@ -277,6 +277,34 @@
 
     };
 
+    function TestConsoleLogTaskNode(serviceMessage) {
+        base.TaskNode.call(this, serviceMessage);
+        this.name = 'TestConsoleLogTaskNode';
+    }
+
+    util.inherits(TestConsoleLogTaskNode, base.TaskNode);
+
+    TestConsoleLogTaskNode.prototype.handleRequest = function (context) {
+
+        var self = this;
+        var dfd = q.defer();
+
+        if (_.isUndefined(context.data)) context.data = {};
+
+        if (_.isUndefined(context.data.steps)) {
+            context.data.steps = [];
+        }
+
+        process.nextTick(function () {
+            console.log(context.currentIteration);
+            context.data.steps.push(context.currentIteration);
+            return dfd.resolve(context);
+        });
+
+        return dfd.promise;
+
+    };
+
 
     module.exports.TestTaskNode = TestTaskNode;
     module.exports.Test2TaskNode = Test2TaskNode;
@@ -288,6 +316,7 @@
     module.exports.TestSuccessorToLoopTaskNode = TestSuccessorToLoopTaskNode;
     module.exports.TestCompensationToLoopTaskNode = TestCompensationToLoopTaskNode;
     module.exports.TestRequestCancellationTaskNode = TestRequestCancellationTaskNode;
+    module.exports.TestConsoleLogTaskNode = TestConsoleLogTaskNode;
 
 })(
     require('lodash'),

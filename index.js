@@ -482,7 +482,6 @@
         return dfd.promise;
     };
 
-
     LoopNode.prototype.loopWhile = function (executionContext) {
         var self = this;
         var dfd = q.defer();
@@ -539,6 +538,160 @@
         // The promise
         return dfd.promise;
     };
+
+
+
+    /************
+    */
+    function IteratorNode(serviceMessage) {
+        Node.call(this, serviceMessage);
+
+        var _iterator;
+        Object.defineProperty(this, "iterator", {
+            get: function () {
+                return _iterator;
+            },
+            set: function (value) {
+                if (_.isUndefined(value)) throw Error("An iterator must be provided");
+                _iterator = value;
+            }
+        });
+
+        var _startNode;
+        Object.defineProperty(this, "startNode", {
+            get: function () {
+                return _startNode;
+            },
+            set: function (value) {
+                if (_.isUndefined(value)) throw Error("A start node must be provided");
+                if (value instanceof Node) {
+                    _startNode = value;
+                } else {
+                    throw Error('StartNode is not of type Node or one of its descendant');
+                }
+            }
+        });
+
+
+        return this;
+    }
+
+    util.inherits(IteratorNode, Node);
+
+    IteratorNode.prototype.initialize = function (params) {
+        params = params || {};
+        IteratorNode.super_.prototype.initialize.call(this, params);
+        this.iterator = params.iterator;
+        this.startNode = params.startNode;
+        this.name = 'Iterator Node';
+
+    };
+
+    IteratorNode.prototype.execute = function (executionContext) {
+        var self = this;
+        var dfd = q.defer();
+        executionContext.visiting(self, 'Entering Loop Iterator', 'Executing Loop iteration');
+        self.loopWhile(executionContext).then(function (responseExecutionContext) {
+            executionContext.visited(self, 'Exiting Loop Iterator', 'Loop iteration Executed');
+            if (responseExecutionContext.isCompensated) {
+                dfd.resolve(responseExecutionContext);
+                return;
+            }
+            executeSuccessor(self, responseExecutionContext, dfd, self.successor ? self.successor.execute : null);
+        }, function (error) {
+
+        }).done(function () {
+            executionContext.update();
+        });
+
+        // The promise
+        return dfd.promise;
+    };
+
+
+    IteratorNode.prototype.loopWhile = function (executionContext) {
+        var self = this;
+        var dfd = q.defer();
+        var index = 0;
+        var workingIterator = null;
+
+        if(_.isString(self.iterator)) {
+            //we need to convert the path to an object
+            var parts = self.iterator.split(".");
+            if(parts[0] != 'executionContext') throw Error('The iterator must be part of the executionContext')
+
+            var obj = executionContext;
+            for(var i=1; i< parts.length; i++) {
+                if(_.isUndefined(obj[parts[i]])) break;
+                obj = obj[parts[i]];
+            }
+            workingIterator = obj;
+        } else {
+            workingIterator = self.iterator;
+        }
+
+        var items = _.map(workingIterator, function(item) {return item});
+
+        function loop(loopExecutionContext) {
+            // When the result of calling `condition` is no longer true, we are
+            // done.
+
+            if (loopExecutionContext.isCompensated) {
+                dfd.resolve(loopExecutionContext);
+                return;
+            }
+
+            q.fcall(function() {return index < items.length}).then(function (conditionResult) {
+
+                if (conditionResult) {
+                    if (executionContext.isCancellationRequested) {
+                        dfd.resolve(loopExecutionContext);
+                    } else {
+                        executionContext.currentIteration = items[index];
+                        index++;
+                        q.fcall(self.startNode.execute.bind(self.startNode), executionContext).then(function (innerLoopEvaluationContext) {
+                            //copyResponseIntoAnother(loopExecutionContext, innerLoopEvaluationContext);
+                            if (innerLoopEvaluationContext.isSuccess) {
+                                loop(loopExecutionContext);
+                            } else {
+                                //When any of the successor within the loop returns an error, we exit the loop
+                                return dfd.resolve(loopExecutionContext);
+                            }
+                        }, function (error) {
+                            return dfd.reject(error);
+                        });
+                    }
+                }
+                else {
+
+                    return dfd.resolve(loopExecutionContext);
+                }
+
+            }, function (error) {
+                console.log("there is an error");
+            }).done(function () {
+                loopExecutionContext.update();
+            });
+        }
+
+        // Start running the loop in the next tick so that this function is
+        // completely async. It would be unexpected if `startNode` was called
+        // synchronously the first time.
+        process.nextTick(function () {
+            loop(executionContext);
+        });
+
+        // The promise
+        return dfd.promise;
+    };
+
+    /*******
+     *
+     *
+     * @param serviceMessage
+     * @returns {NoOpTaskNode}
+     * @constructor
+     */
 
     function NoOpTaskNode(serviceMessage) {
         TaskNode.call(this, serviceMessage);
@@ -827,6 +980,7 @@
     exports.CompensatedNode = CompensatedNode;
     exports.NodeFactory = NodeFactory;
     exports.LoopNode = LoopNode;
+    exports.IteratorNode = IteratorNode;
     exports.NoOpTaskNode = NoOpTaskNode;
     exports.ExecutionContext = ExecutionContext;
 
@@ -836,6 +990,7 @@
         .register({dependency: '/index::ConditionNode', name: 'ConditionNode'})
         .register({dependency: '/index::CompensatedNode', name: 'CompensatedNode'})
         .register({dependency: '/index::LoopNode', name: 'LoopNode'})
+        .register({dependency: '/index::IteratorNode', name: 'IteratorNode'})
         .register({dependency: '/index::Processor', name: 'Processor'})
         .register({dependency: '/index::NoOpTaskNode', name: 'NoOpTaskNode'})
         .register({dependency: '/index::ProcessorLoader', name: 'processorLoader'})

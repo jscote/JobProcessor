@@ -49,6 +49,7 @@ module.exports = {
             .register({dependency: '/TestClasses::Test3TaskNode', name: 'Test3TaskNode'})
             .register({dependency: '/TestClasses::Test4TaskNode', name: 'Test4TaskNode'})
             .register({dependency: '/TestClasses::TestLoopTaskNode', name: 'TestLoopTaskNode'})
+            .register({dependency: '/TestClasses::TestConsoleLogTaskNode', name: 'TestConsoleLogTaskNode'})
             .register({dependency: '/TestClasses::Test2LoopTaskNode', name: 'Test2LoopTaskNode'})
             .register({
                 dependency: '/TestClasses::TestRequestCancellationTaskNode',
@@ -142,6 +143,63 @@ module.exports = {
 
             test.done();
         });
+    },
+    testCanInjectIteratorNode: function (test) {
+        var iteratorNode = Injector.resolve({target: "IteratorNode"});
+        test.ok(iteratorNode);
+
+        test.done();
+    },
+    testIteratorNode_WhenValidArrayIterator_IsInstantiated: function (test) {
+        var iteratorNode = NodeFactory.create("IteratorNode", {
+            iterator: [],
+            successor: NodeFactory.create("NoOpTaskNode"),
+            startNode: NodeFactory.create("NoOpTaskNode")
+        });
+        test.ok(iteratorNode);
+        test.done();
+    },
+    testIteratorNode_WhenValidObjectIterator_IsInstantiated: function (test) {
+        var iteratorNode = NodeFactory.create("IteratorNode", {
+            iterator: {prop1: 'prop1', prop2: 'prop2'},
+            successor: NodeFactory.create("NoOpTaskNode"),
+            startNode: NodeFactory.create("NoOpTaskNode")
+        });
+        test.ok(iteratorNode);
+        test.done();
+    },
+    testIteratorNode_WhenValidObjectFunctionIterator_IsInstantiated: function (test) {
+        var iteratorNode = NodeFactory.create("IteratorNode", {
+            iterator: new (function() {this.prop1 = "prop1", this.prop2 = "prop2"})(),
+            successor: NodeFactory.create("NoOpTaskNode"),
+            startNode: NodeFactory.create("NoOpTaskNode")
+        });
+        test.ok(iteratorNode);
+        test.done();
+    },
+    testIteratorNode_WhenValidObjectFunctionIterator_CanExecute: function (test) {
+        var iteratorNode = NodeFactory.create("IteratorNode", {
+            iterator: "executionContext.request.data",
+            startNode: NodeFactory.create("TestConsoleLogTaskNode"),
+            successor: NodeFactory.create("TestConsoleLogTaskNode")
+        });
+        test.ok(iteratorNode);
+
+        var request = {data: new (function() {this.prop1 = "prop1", this.prop2 = "prop2"})()};
+        var context = new ExecutionContext({request: request});
+
+        iteratorNode.execute(context).then(function(responseContext){
+            test.ok(responseContext);
+            test.ok(responseContext.data.steps[0] == "prop1");
+            test.ok(responseContext.data.steps[1] == "prop2");
+
+            test.ok(responseContext.isSuccess);
+            test.ok(responseContext.errors.length == 0);
+
+            test.done();
+        });
+
+        //test.done();
     },
     t7estTaskCanExecuteSequence: function (test) {
         var taskNode = NodeFactory.create("TestTaskNode", {successor: NodeFactory.create('Test2TaskNode')});
