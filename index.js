@@ -141,6 +141,7 @@
             }
         });
 
+        this.configuration = engineConfig;
         this.messaging = serviceMessage;
         this.name = 'Node';
 
@@ -952,7 +953,7 @@
 
     var engineConfig = {};
     Processor.config = function (config) {
-        engineConfig.processorPath = config.processorPath;
+        _.extend(engineConfig, config);
     };
 
     Processor.getProcessor = function (processorName) {
