@@ -1,7 +1,7 @@
 /**
  * Created by jean-sebastiencote on 11/1/14.
  */
-(function (util, _, q, process, log4js, Injector, serviceMessage, ruleEngineModule) {
+(function (util, _, q, process, Injector, serviceMessage, ruleEngineModule) {
 
     'use strict';
     /*
@@ -27,8 +27,8 @@
     var ruleEngine = Injector.resolve({target: 'ruleEngine'});
 
 
-    var logger = log4js.getLogger();
-    logger.setLevel('ERROR');
+    //var logger = log4js.getLogger();
+    //logger.setLevel('ERROR');
 
     function ExecutionContext(options) {
 
@@ -60,7 +60,7 @@
 
         if (!this.trackingEnabled) return;
 
-        logger.info(message || '', action || 'Visiting ', node.name, ' for correlationId ', this.correlationId || "No Correlation Id");
+        //logger.info(message || '', action || 'Visiting ', node.name, ' for correlationId ', this.correlationId || "No Correlation Id");
         if (_.isUndefined(action)) {
             this.steps.push({begin: true, action: "visiting", name: node.name, message: message});
         } else {
@@ -71,7 +71,7 @@
     ExecutionContext.prototype.visited = function (node, message, action) {
         if (!this.trackingEnabled) return;
 
-        logger.info(message || '', action || 'Visited ', node.name, ' for correlationId ', this.correlationId || "No Correlation Id");
+        //logger.info(message || '', action || 'Visited ', node.name, ' for correlationId ', this.correlationId || "No Correlation Id");
 
         if (_.isUndefined(action)) {
             this.steps.push({begin: false, action: "visited", name: node.name, message: message});
@@ -832,7 +832,7 @@
                     parameters = innerDefinition[prop];
                     if (!_.isUndefined(parameters)) {
                         for (var paramProp in parameters) {
-                            if (paramProp == 'condition') {
+                            if (paramProp == 'condition' || paramProp == 'iterator') {
                                 inner[paramProp] = parameters[paramProp];
                             } else {
                                 inner[paramProp] = internalParse(parameters[paramProp]);
@@ -1003,7 +1003,7 @@
     module.require('lodash'),
     module.require('q'),
     process,
-    require('log4js'),
+    //require('log4js'),
     require('jsai-injector'),
     require('jsai-servicemessage'),
     require('jsai-ruleengine/RuleEvaluator')
