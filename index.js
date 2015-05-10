@@ -26,6 +26,111 @@
     Injector.register({dependency: serviceMessage, name: 'serviceMessage'});
     var ruleEngine = Injector.resolve({target: 'ruleEngine'});
 
+    Argument.Direction = {
+        in: 1,
+        out: 2,
+        inOut: 3
+    };
+
+    function Argument(options) {
+        if (!_.isUndefined(options.direction) && !(options.direction === Argument.Direction.in
+            || options.direction === Argument.Direction.inOut
+            || options.direction === Argument.Direction.out)) {
+            throw Error("Invalid Direction");
+        }
+        var _direction = _.isUndefined(options.direction) ? Argument.Direction.inOut : options.direction;
+        Object.defineProperty(this, 'name', {writable: false, enumerable: true, value: options.name});
+        Object.defineProperty(this, 'value', {writable: true, enumerable: true, value: options.value});
+        Object.defineProperty(this, 'direction', {
+            get: function () {
+                return _direction;
+            },
+            set: function (value) {
+                if (value != _direction && !(options.direction === 0 || options.direction === 1 || options.direction === 3)) {
+                    _direction = value;
+                }
+            }
+        })
+    }
+
+    function ArgumentCollection(argumentDirection) {
+
+        if (_.isUndefined(argumentDirection) || !(argumentDirection === Argument.Direction.in
+                        || argumentDirection === Argument.Direction.out)) {
+            throw Error("Invalid Direction");
+        }
+
+        var _direction = argumentDirection;
+
+        Object.defineProperty(this, "direction", {writable: false, enumerable: true, value: _direction});
+    }
+
+    ArgumentCollection.prototype.get = function (argumentName) {
+        if (_.isUndefined(this[argumentName])) {
+            throw Error("Argument doesn't exist");
+        }
+
+        return this[argumentName].value;
+    };
+
+    ArgumentCollection.prototype.getArgumentObject = function (argumentName) {
+        if (_.isUndefined(this[argumentName])) {
+            throw Error("Argument doesn't exist");
+        }
+
+        return this[argumentName];
+    };
+
+    ArgumentCollection.prototype.set = function (argumentName, argumentValue) {
+        if (_.isUndefined(this[argumentName])) {
+            throw Error("Argument doesn't exist");
+        }
+
+        this[argumentName].value = argumentValue;
+        return this[argumentName].value;
+    };
+
+    ArgumentCollection.prototype.setArgumentObject = function (argument) {
+        if (!(argument instanceof Argument)) {
+            throw Error("Not a valid argument");
+        }
+
+        if(!(argument.direction === this.direction) && (argument.direction !== Argument.Direction.inOut)) {
+            throw Error("Argument has incompatible direction");
+        }
+
+        this[argument.name] = argument;
+        return argument;
+    };
+
+    function Arguments() {
+        var _in = new ArgumentCollection(Argument.Direction.in);
+        var _out = new ArgumentCollection(Argument.Direction.out);
+
+        Object.defineProperty(this, "in", {writable: false, enumerable: true, value: _in});
+        Object.defineProperty(this, "out", {writable: false, enumerable: true, value: _out});
+    }
+
+    Arguments.prototype.add = function (arg) {
+        if (arg instanceof Argument) {
+            switch(arg.direction) {
+                case Argument.Direction.in:
+                    this.in.setArgumentObject(arg);
+                    break;
+                case Argument.Direction.out:
+                    this.out.setArgumentObject(arg);
+                    break;
+                case Argument.Direction.inOut:
+                    this.in.setArgumentObject(arg);
+                    this.out.setArgumentObject(arg);
+                    break;
+            }
+
+            return arg;
+        }
+
+        return null;
+    };
 
     //var logger = log4js.getLogger();
     //logger.setLevel('ERROR');
@@ -541,9 +646,8 @@
     };
 
 
-
     /************
-    */
+     */
     function IteratorNode(serviceMessage) {
         Node.call(this, serviceMessage);
 
@@ -616,14 +720,14 @@
         var index = 0;
         var workingIterator = null;
 
-        if(_.isString(self.iterator)) {
+        if (_.isString(self.iterator)) {
             //we need to convert the path to an object
             var parts = self.iterator.split(".");
-            if(parts[0] != 'executionContext') throw Error('The iterator must be part of the executionContext')
+            if (parts[0] != 'executionContext') throw Error('The iterator must be part of the executionContext')
 
             var obj = executionContext;
-            for(var i=1; i< parts.length; i++) {
-                if(_.isUndefined(obj[parts[i]])) break;
+            for (var i = 1; i < parts.length; i++) {
+                if (_.isUndefined(obj[parts[i]])) break;
                 obj = obj[parts[i]];
             }
             workingIterator = obj;
@@ -631,7 +735,9 @@
             workingIterator = self.iterator;
         }
 
-        var items = _.map(workingIterator, function(item) {return item});
+        var items = _.map(workingIterator, function (item) {
+            return item
+        });
 
         function loop(loopExecutionContext) {
             // When the result of calling `condition` is no longer true, we are
@@ -642,7 +748,9 @@
                 return;
             }
 
-            q.fcall(function() {return index < items.length}).then(function (conditionResult) {
+            q.fcall(function () {
+                return index < items.length
+            }).then(function (conditionResult) {
 
                 if (conditionResult) {
                     if (executionContext.isCancellationRequested) {
@@ -984,6 +1092,8 @@
     exports.IteratorNode = IteratorNode;
     exports.NoOpTaskNode = NoOpTaskNode;
     exports.ExecutionContext = ExecutionContext;
+    exports.Argument = Argument;
+    exports.Arguments = Arguments;
 
     Injector.setBasePath(__dirname);
     Injector

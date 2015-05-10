@@ -8,6 +8,8 @@ global.Injector = require('jsai-injector');
 var p = require('path');
 
 var Processor = require('../index').Processor;
+var Arguments = require('../index').Arguments;
+var Argument = require('../index').Argument;
 var NodeFactory = require('../index').NodeFactory;
 var TaskNode = require('../index').TaskNode;
 var ConditionNode = require('../index').ConditionNode;
@@ -1484,7 +1486,7 @@ module.exports = {
     t42estLoad: function (test) {
 
         var promises = [];
-        for (var i = 0; i < 100; i++) {
+        for (var i = 0; i < 1; i++) {
             Processor.getProcessor("testProcessor").then(function (processor) {
                 var request = new processor.messaging.ServiceMessage();
                 request.setCorrelationId();
@@ -1513,5 +1515,45 @@ module.exports = {
             test.ok(true, 'expected failure of loading');
             test.done();
         })
+    },
+    testArgumentsCanBeCreated: function(test) {
+        var args = new Arguments();
+        test.ok(args);
+        test.done();
+    },
+    testArgumentCanBeCreated: function(test) {
+        var arg = new Argument({name: 'testArgument', direction: Argument.Direction.in, value: "test"});
+        test.ok(arg.name=="testArgument", "Name is not set correctly");
+        test.ok(arg.direction == Argument.Direction.in, "Direction is not set correctly");
+        test.ok(arg.value == "test", "value is not set correctly");
+
+        test.done();
+    },
+    testArgumentCannotBeCreatedWithInvalidDirection: function(test) {
+
+        test.throws(function() {
+            var arg = new Argument({name: 'testArgument', direction: "stuff", value: "test"});
+        });
+        test.done();
+
+
+    },
+    testArgumentWithoutDirectionWillBeInOut : function(test) {
+        var arg = new Argument({name: 'testArgument', value: "test"});
+        test.ok(arg.name=="testArgument", "Name is not set correctly");
+        test.ok(arg.direction == Argument.Direction.inOut, "Direction is not set correctly");
+        test.ok(arg.value == "test", "value is not set correctly");
+
+        test.done();
+    },
+    testArgumentCanBeAddedToArguments: function(test) {
+        var arg = new Argument({name: 'testArgument', value: "test"});
+        var args= new Arguments();
+
+        args.add(arg);
+        test.ok(args.in.get("testArgument") == "test", "in argument set correctly");
+        test.ok(args.out.get("testArgument") == "test", "out argument set correctly");
+
+        test.done();
     }
 };

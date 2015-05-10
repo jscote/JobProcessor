@@ -305,6 +305,87 @@
 
     };
 
+    var fReWrittenCondition = function (evalContext) {
+        var dfd = q.defer();
+
+        var provider = Injector.resolve({target: 'votingCombinationProvider'});
+
+        var id = evalContext.in.get("votingDescriptorId");
+
+        provider.getVotingCombinationByVotingDescriptorId(id).then(function (combinations) {
+            if (combinations.length == 0) {
+                evalContext.fact.out.set("rejectionReason", "voting descriptor invalid - combination not found");
+                dfd.resolve({isTrue: false});
+                return;
+            }
+            var descriptors = combinations[0].getVotingDescriptors({votingDescriptorId: id});
+            if (descriptors.length == 0) {
+                evalContext.fact.out.set("rejectionReason", "voting descriptor invalid - descriptor not found");
+                dfd.resolve({isTrue: false});
+                return;
+            }
+
+            var descriptor = descriptors[0];
+
+            var hierarchyProvider = Injector.resolve({target: 'votingHierarchyProvider'});
+
+            hierarchyProvider.getVotingHierarchyById(combinations[0].votingHierarchyId).then(function (votingHierarchy) {
+
+                if (votingHierarchy != null) {
+                    var levels = _.filter(votingHierarchy.getLevels({level: descriptor.level}), _.matches({descriptor: descriptor.votingDescriptorId.split('-')[0]}));
+                    if (levels.length > 0 && levels[0].isVotable === true) {
+                        evalContext.fact.out.set("votingHierarchy", votingHierarchy);
+                        evalContext.fact.out.set("votingDescriptor", descriptor);
+                        evalContext.fact.out.set("votingCombination", combinations[0]);
+                        dfd.resolve({isTrue: true});
+                    } else {
+                        evalContext.fact.out.set("rejectionReason", "voting descriptor invalid - level not found or doesn't accept vote");
+                        dfd.resolve({isTrue: false});
+                    }
+                }
+
+            }).fail(function (error) {
+                evalContext.fact.out.set("rejectionReason", "voting descriptor invalid - error: " + error);
+                dfd.resolve({isTrue: false});
+            });
+        }).fail(function (error) {
+            evalContext.fact.out.set("rejectionReason", "voting descriptor invalid - error: " + error);
+            dfd.resolve({isTrue: false});
+        });
+
+        return dfd.promise;
+    };
+
+    ReWrittenhandleRequest = function (arguments) {
+        var dfd = q.defer();
+        var self = this;
+
+        //If the vote is rejected because of an invalid voting descriptor, a lot will be missing for saving
+        try {
+            var obj = this.provider.create();
+            obj.setFromVotingCombination({
+                voteId: arguments.in.get("voteId"),
+                voterId: arguments.in.get("voterId"),
+                votingCombination: arguments.in.get("votingCombination")
+            });
+            q.all(self.provider.save(obj)).then(function () {
+                console.log("saved");
+                dfd.resolve(arguments);
+            }).fail(function (error) {
+                dfd.reject(error);
+            });
+
+
+        }
+        catch (error) {
+            dfd.reject(error);
+            console.log(error);
+        } finally {
+            return dfd.promise;
+        }
+
+    };
+
 
     module.exports.TestTaskNode = TestTaskNode;
     module.exports.Test2TaskNode = Test2TaskNode;
