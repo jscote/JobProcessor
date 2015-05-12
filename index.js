@@ -1,7 +1,7 @@
 /**
  * Created by jean-sebastiencote on 11/1/14.
  */
-(function (util, _, q, process, Injector, serviceMessage, ruleEngineModule) {
+(function (util, _, q, process, Injector, serviceMessage) {
 
     'use strict';
     /*
@@ -67,9 +67,7 @@
 
     function ArgumentDefinitionCollection(argumentDirection) {
 
-        var _direction = argumentDirection;
-
-        Object.defineProperty(this, "direction", {writable: false, enumerable: true, value: _direction});
+        Object.defineProperty(this, "direction", {writable: false, enumerable: true, value: argumentDirection});
     }
 
 
@@ -86,7 +84,9 @@
             throw Error("Not a valid argument");
         }
 
-        if (!(argument.direction === this.direction) && (argument.direction !== Argument.Direction.inOut)) {
+        if (argument.direction !== Argument.Direction.in
+            && argument.direction !== Argument.Direction.out
+            && argument.direction !== Argument.Direction.inOut) {
             throw Error("Argument has incompatible direction");
         }
 
@@ -136,6 +136,19 @@
         return this[argumentName].value;
     };
 
+    ArgumentCollection.prototype.setArgumentObject = function (argument) {
+        if (!(argument instanceof Argument)) {
+            throw Error("Not a valid argument");
+        }
+
+        if (!(argument.direction === this.direction) && (argument.direction !== Argument.Direction.inOut)) {
+            throw Error("Argument has incompatible direction");
+        }
+
+        this[argument.name] = argument;
+        return argument;
+    };
+
 
     function Arguments() {
         var _in = new ArgumentCollection(Argument.Direction.in);
@@ -170,21 +183,31 @@
         if (!_.isArray(argumentDefinitions)) {
             throw Error("Expecting an array of argument definitions");
         }
-        var _definitions = new ArgumentCollection(Argument.Direction.inOut);
+        var _definitions = new ArgumentDefinitionCollection(Argument.Direction.inOut);
         Object.defineProperty(this, "definitions", {enumerable: true, writable: false, value: _definitions});
 
         _.forEach(argumentDefinitions, function (definition) {
             if (_.isUndefined(definition.name)) throw Error("definition should have a name");
             if (!_.isUndefined(definition.direction) &&
                 (definition.direction !== Argument.Direction.in
-                || definition.direction !== Argument.Direction.out
-                || definition.direction !== Argument.Direction.inOut)) {
+                && definition.direction !== Argument.Direction.out
+                && definition.direction !== Argument.Direction.inOut)) {
                 throw Error("direction is invalid");
             }
 
             _definitions.setArgumentObject(new Argument(definition));
         });
     }
+
+    TaskContract.prototype.createArguments = function(){
+        var args = new Arguments();
+
+        _.forEach(this.definitions, function(definition){
+            args.add(new Argument(definition));
+        });
+
+        return args;
+    };
 
     //var logger = log4js.getLogger();
     //logger.setLevel('ERROR');
@@ -777,7 +800,7 @@
         if (_.isString(self.iterator)) {
             //we need to convert the path to an object
             var parts = self.iterator.split(".");
-            if (parts[0] != 'executionContext') throw Error('The iterator must be part of the executionContext')
+            if (parts[0] != 'executionContext') throw Error('The iterator must be part of the executionContext');
 
             var obj = executionContext;
             for (var i = 1; i < parts.length; i++) {
@@ -1010,8 +1033,8 @@
 
             }
 
-            var node = NodeFactory.create(nodeType, inner);
-            return node;
+            return NodeFactory.create(nodeType, inner);
+
         }
 
         var materializedDefinition = {};
@@ -1148,6 +1171,7 @@
     exports.ExecutionContext = ExecutionContext;
     exports.Argument = Argument;
     exports.Arguments = Arguments;
+    exports.TaskContract = TaskContract;
 
     Injector.setBasePath(__dirname);
     Injector

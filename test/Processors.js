@@ -10,6 +10,7 @@ var p = require('path');
 var Processor = require('../index').Processor;
 var Arguments = require('../index').Arguments;
 var Argument = require('../index').Argument;
+var TaskContract = require('../index').TaskContract;
 var NodeFactory = require('../index').NodeFactory;
 var TaskNode = require('../index').TaskNode;
 var ConditionNode = require('../index').ConditionNode;
@@ -172,7 +173,9 @@ module.exports = {
     },
     testIteratorNode_WhenValidObjectFunctionIterator_IsInstantiated: function (test) {
         var iteratorNode = NodeFactory.create("IteratorNode", {
-            iterator: new (function() {this.prop1 = "prop1", this.prop2 = "prop2"})(),
+            iterator: new (function () {
+                this.prop1 = "prop1", this.prop2 = "prop2"
+            })(),
             successor: NodeFactory.create("NoOpTaskNode"),
             startNode: NodeFactory.create("NoOpTaskNode")
         });
@@ -187,10 +190,14 @@ module.exports = {
         });
         test.ok(iteratorNode);
 
-        var request = {data: new (function() {this.prop1 = "prop1", this.prop2 = "prop2"})()};
+        var request = {
+            data: new (function () {
+                this.prop1 = "prop1", this.prop2 = "prop2"
+            })()
+        };
         var context = new ExecutionContext({request: request});
 
-        iteratorNode.execute(context).then(function(responseContext){
+        iteratorNode.execute(context).then(function (responseContext) {
             test.ok(responseContext);
             test.ok(responseContext.data.steps[0] == "prop1");
             test.ok(responseContext.data.steps[1] == "prop2");
@@ -1516,39 +1523,39 @@ module.exports = {
             test.done();
         })
     },
-    testArgumentsCanBeCreated: function(test) {
+    testArgumentsCanBeCreated: function (test) {
         var args = new Arguments();
         test.ok(args);
         test.done();
     },
-    testArgumentCanBeCreated: function(test) {
+    testArgumentCanBeCreated: function (test) {
         var arg = new Argument({name: 'testArgument', direction: Argument.Direction.in, value: "test"});
-        test.ok(arg.name=="testArgument", "Name is not set correctly");
+        test.ok(arg.name == "testArgument", "Name is not set correctly");
         test.ok(arg.direction == Argument.Direction.in, "Direction is not set correctly");
         test.ok(arg.value == "test", "value is not set correctly");
 
         test.done();
     },
-    testArgumentCannotBeCreatedWithInvalidDirection: function(test) {
+    testArgumentCannotBeCreatedWithInvalidDirection: function (test) {
 
-        test.throws(function() {
+        test.throws(function () {
             var arg = new Argument({name: 'testArgument', direction: "stuff", value: "test"});
         });
         test.done();
 
 
     },
-    testArgumentWithoutDirectionWillBeInOut : function(test) {
+    testArgumentWithoutDirectionWillBeInOut: function (test) {
         var arg = new Argument({name: 'testArgument', value: "test"});
-        test.ok(arg.name=="testArgument", "Name is not set correctly");
+        test.ok(arg.name == "testArgument", "Name is not set correctly");
         test.ok(arg.direction == Argument.Direction.inOut, "Direction is not set correctly");
         test.ok(arg.value == "test", "value is not set correctly");
 
         test.done();
     },
-    testArgumentCanBeAddedToArguments: function(test) {
+    testArgumentCanBeAddedToArguments: function (test) {
         var arg = new Argument({name: 'testArgument', value: "test"});
-        var args= new Arguments();
+        var args = new Arguments();
 
         args.add(arg);
         test.ok(args.in.get("testArgument") == "test", "in argument set correctly");
@@ -1556,12 +1563,12 @@ module.exports = {
 
         test.done();
     },
-    testArgumentsCanBeFlatten : function(test) {
+    testArgumentsCanBeFlatten: function (test) {
 
         var arg = new Argument({name: 'testArgument', value: "test"});
         var arg1 = new Argument({name: 'testAnotherArgument', value: {name: "test"}});
 
-        var args= new Arguments();
+        var args = new Arguments();
 
         args.add(arg);
         args.add(arg1);
@@ -1570,6 +1577,88 @@ module.exports = {
 
         test.ok(flatten.testArgument == "test");
         test.ok(flatten.testAnotherArgument.name == "test");
+
+        test.done();
+    },
+    testNoDefinitionsWillNotCreateContract: function (test) {
+
+        test.throws(function () {
+            var contract = new TaskContract();
+        });
+
+        test.done();
+    },
+    testDefinitionWihtoutNameWillNotCreateContract: function (test) {
+        test.throws(function () {
+            var contract = new TaskContract([{}]);
+        });
+
+        test.done();
+    },
+    testDefinitionsNotAnArrayWillNotCreateContract: function (test) {
+        test.throws(function () {
+            var contract = new TaskContract({});
+        });
+        test.done();
+    },
+    testDefinitionWithNameOnlyWillCreateContract: function (test) {
+        var contract = new TaskContract([{name: "something"}]);
+
+        test.ok(contract !== null);
+        test.ok(contract !== undefined);
+        test.ok(contract.definitions.something !== null);
+        test.ok(contract.definitions.something !== undefined);
+        test.ok(contract.definitions.something.direction === Argument.Direction.inOut);
+
+        test.done();
+    },
+    testDefinitionWithNameAndDirectionWillCreateContract: function (test) {
+        var contract = new TaskContract([{name: "something", direction: Argument.Direction.in}]);
+
+        test.ok(contract !== null);
+        test.ok(contract !== undefined);
+        test.ok(contract.definitions.something !== null);
+        test.ok(contract.definitions.something !== undefined);
+        test.ok(contract.definitions.something.direction === Argument.Direction.in);
+
+        test.done();
+    },
+    testWithMultipleDefinitionsWillCreateContract: function (test) {
+        var contract = new TaskContract([{name: "something", direction: Argument.Direction.in}, {
+            name: "somethingElse",
+            direction: Argument.Direction.out
+        }, {name: "andAnother"}]);
+
+
+        test.ok(contract !== null);
+        test.ok(contract !== undefined);
+        test.ok(contract.definitions.something !== null);
+        test.ok(contract.definitions.something !== undefined);
+        test.ok(contract.definitions.something.direction === Argument.Direction.in);
+
+        test.ok(contract.definitions.somethingElse !== null);
+        test.ok(contract.definitions.somethingElse !== undefined);
+        test.ok(contract.definitions.somethingElse.direction === Argument.Direction.out);
+
+        test.ok(contract.definitions.andAnother !== null);
+        test.ok(contract.definitions.andAnother !== undefined);
+        test.ok(contract.definitions.andAnother.direction === Argument.Direction.inOut);
+
+        test.done();
+    },
+    testWithMultipleDefinitionsWillCreateArguments: function (test) {
+        var contract = new TaskContract([{name: "something", direction: Argument.Direction.in}, {
+            name: "somethingElse",
+            direction: Argument.Direction.out
+        }, {name: "andAnother"}]);
+
+        var args = contract.createArguments();
+        args.in.set("something", "test");
+        args.in.set("andAnother", {name: "test"});
+        test.ok(args.in.get("something") == "test");
+        test.ok(args.in.get("andAnother").name == "test");
+
+        test.ok(args.out.get("somethingElse") === undefined, "the value of out argument should not be defined yet");
 
         test.done();
     }
