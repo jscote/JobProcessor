@@ -1555,5 +1555,22 @@ module.exports = {
         test.ok(args.out.get("testArgument") == "test", "out argument set correctly");
 
         test.done();
+    },
+    testArgumentsCanBeFlatten : function(test) {
+
+        var arg = new Argument({name: 'testArgument', value: "test"});
+        var arg1 = new Argument({name: 'testAnotherArgument', value: {name: "test"}});
+
+        var args= new Arguments();
+
+        args.add(arg);
+        args.add(arg1);
+
+        var flatten = args.out.flatten();
+
+        test.ok(flatten.testArgument == "test");
+        test.ok(flatten.testAnotherArgument.name == "test");
+
+        test.done();
     }
 };

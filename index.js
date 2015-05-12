@@ -32,7 +32,7 @@
         inOut: 3
     };
 
-    function Argument(options) {
+    function ArgumentDefinition(options){
         if (!_.isUndefined(options.direction) && !(options.direction === Argument.Direction.in
             || options.direction === Argument.Direction.inOut
             || options.direction === Argument.Direction.out)) {
@@ -40,7 +40,6 @@
         }
         var _direction = _.isUndefined(options.direction) ? Argument.Direction.inOut : options.direction;
         Object.defineProperty(this, 'name', {writable: false, enumerable: true, value: options.name});
-        Object.defineProperty(this, 'value', {writable: true, enumerable: true, value: options.value});
         Object.defineProperty(this, 'direction', {
             get: function () {
                 return _direction;
@@ -51,7 +50,20 @@
                 }
             }
         })
+
     }
+
+
+    function Argument(options) {
+        ArgumentDefinition.call(this, options);
+        Object.defineProperty(this, 'value', {writable: true, enumerable: true, value: options.value});
+    }
+
+    util.inherits(Argument, ArgumentDefinition);
+
+    Argument.prototype.flatten = function() {
+        return this.value;
+    };
 
     function ArgumentCollection(argumentDirection) {
 
@@ -71,6 +83,17 @@
         }
 
         return this[argumentName].value;
+    };
+
+    ArgumentCollection.prototype.flatten = function(){
+        var obj = {};
+
+        for(var prop in this) {
+            if(this[prop] instanceof Argument) {
+                obj[prop] = this[prop].flatten();
+            }
+        }
+        return obj;
     };
 
     ArgumentCollection.prototype.getArgumentObject = function (argumentName) {
@@ -131,6 +154,10 @@
 
         return null;
     };
+
+    function TaskContract (argumentDefinitions){
+
+    }
 
     //var logger = log4js.getLogger();
     //logger.setLevel('ERROR');
