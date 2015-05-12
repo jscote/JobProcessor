@@ -32,7 +32,7 @@
         inOut: 3
     };
 
-    function ArgumentDefinition(options){
+    function ArgumentDefinition(options) {
         if (!_.isUndefined(options.direction) && !(options.direction === Argument.Direction.in
             || options.direction === Argument.Direction.inOut
             || options.direction === Argument.Direction.out)) {
@@ -61,21 +61,52 @@
 
     util.inherits(Argument, ArgumentDefinition);
 
-    Argument.prototype.flatten = function() {
+    Argument.prototype.flatten = function () {
         return this.value;
     };
 
-    function ArgumentCollection(argumentDirection) {
-
-        if (_.isUndefined(argumentDirection) || !(argumentDirection === Argument.Direction.in
-                        || argumentDirection === Argument.Direction.out)) {
-            throw Error("Invalid Direction");
-        }
+    function ArgumentDefinitionCollection(argumentDirection) {
 
         var _direction = argumentDirection;
 
         Object.defineProperty(this, "direction", {writable: false, enumerable: true, value: _direction});
     }
+
+
+    ArgumentDefinitionCollection.prototype.getArgumentObject = function (argumentName) {
+        if (_.isUndefined(this[argumentName])) {
+            throw Error("Argument doesn't exist");
+        }
+
+        return this[argumentName];
+    };
+
+    ArgumentDefinitionCollection.prototype.setArgumentObject = function (argument) {
+        if (!(argument instanceof Argument)) {
+            throw Error("Not a valid argument");
+        }
+
+        if (!(argument.direction === this.direction) && (argument.direction !== Argument.Direction.inOut)) {
+            throw Error("Argument has incompatible direction");
+        }
+
+        this[argument.name] = argument;
+        return argument;
+    };
+
+
+    function ArgumentCollection(argumentDirection) {
+
+        if (_.isUndefined(argumentDirection) || !(argumentDirection === Argument.Direction.in
+            || argumentDirection === Argument.Direction.out)) {
+            throw Error("Invalid Direction");
+        }
+
+        ArgumentDefinitionCollection.call(this, argumentDirection);
+
+    }
+
+    util.inherits(ArgumentCollection, ArgumentDefinitionCollection);
 
     ArgumentCollection.prototype.get = function (argumentName) {
         if (_.isUndefined(this[argumentName])) {
@@ -85,23 +116,15 @@
         return this[argumentName].value;
     };
 
-    ArgumentCollection.prototype.flatten = function(){
+    ArgumentCollection.prototype.flatten = function () {
         var obj = {};
 
-        for(var prop in this) {
-            if(this[prop] instanceof Argument) {
+        for (var prop in this) {
+            if (this[prop] instanceof Argument) {
                 obj[prop] = this[prop].flatten();
             }
         }
         return obj;
-    };
-
-    ArgumentCollection.prototype.getArgumentObject = function (argumentName) {
-        if (_.isUndefined(this[argumentName])) {
-            throw Error("Argument doesn't exist");
-        }
-
-        return this[argumentName];
     };
 
     ArgumentCollection.prototype.set = function (argumentName, argumentValue) {
@@ -113,18 +136,6 @@
         return this[argumentName].value;
     };
 
-    ArgumentCollection.prototype.setArgumentObject = function (argument) {
-        if (!(argument instanceof Argument)) {
-            throw Error("Not a valid argument");
-        }
-
-        if(!(argument.direction === this.direction) && (argument.direction !== Argument.Direction.inOut)) {
-            throw Error("Argument has incompatible direction");
-        }
-
-        this[argument.name] = argument;
-        return argument;
-    };
 
     function Arguments() {
         var _in = new ArgumentCollection(Argument.Direction.in);
@@ -136,7 +147,7 @@
 
     Arguments.prototype.add = function (arg) {
         if (arg instanceof Argument) {
-            switch(arg.direction) {
+            switch (arg.direction) {
                 case Argument.Direction.in:
                     this.in.setArgumentObject(arg);
                     break;
@@ -155,8 +166,24 @@
         return null;
     };
 
-    function TaskContract (argumentDefinitions){
+    function TaskContract(argumentDefinitions) {
+        if (!_.isArray(argumentDefinitions)) {
+            throw Error("Expecting an array of argument definitions");
+        }
+        var _definitions = new ArgumentCollection(Argument.Direction.inOut);
+        Object.defineProperty(this, "definitions", {enumerable: true, writable: false, value: _definitions});
 
+        _.forEach(argumentDefinitions, function (definition) {
+            if (_.isUndefined(definition.name)) throw Error("definition should have a name");
+            if (!_.isUndefined(definition.direction) &&
+                (definition.direction !== Argument.Direction.in
+                || definition.direction !== Argument.Direction.out
+                || definition.direction !== Argument.Direction.inOut)) {
+                throw Error("direction is invalid");
+            }
+
+            _definitions.setArgumentObject(new Argument(definition));
+        });
     }
 
     //var logger = log4js.getLogger();
