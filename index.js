@@ -199,10 +199,10 @@
         });
     }
 
-    TaskContract.prototype.createArguments = function(){
+    TaskContract.prototype.createArguments = function () {
         var args = new Arguments();
 
-        _.forEach(this.definitions, function(definition){
+        _.forEach(this.definitions, function (definition) {
             args.add(new Argument(definition));
         });
 
@@ -323,6 +323,22 @@
             }
         });
 
+        var _contract;
+        Object.defineProperty(this, "contract", {
+            enumerable: true,
+            set: function (value) {
+                if(!(value instanceof TaskContract )) throw Error("Contract should be of TaskContract type.");
+
+                _contract = value;
+                _arguments = _contract.createArguments();
+            },
+            get: function () {
+                return _contract;
+            }
+        });
+        var _arguments;
+        Object.defineProperty(this, "arguments", {enumerable: true, get: function(){return _arguments;}});
+
         this.configuration = engineConfig;
         this.messaging = serviceMessage;
         this.name = 'Node';
@@ -334,6 +350,10 @@
         params = params || {};
         this.successor = params.successor;
         if (_.isUndefined(this.name)) this.name = params.name;
+
+        if (!_.isUndefined(params.contract)) {
+            this.contract = new TaskContract(params.contract);
+        }
 
     };
 

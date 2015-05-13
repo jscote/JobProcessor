@@ -124,8 +124,58 @@ module.exports = {
 
         test.done();
     },
+    testCanInjectTaskNodeWithContract: function (test) {
+
+        var taskNode = NodeFactory.create("TaskNode", {contract : [{name: "something", direction: Argument.Direction.in}]});
+
+        test.ok(taskNode);
+        test.ok(taskNode instanceof TaskNode);
+        test.ok(taskNode.contract);
+
+        test.ok(taskNode.contract.createArguments().in.get("something") == undefined);
+
+        test.done();
+    },
+    testCanInjectTaskNodeWithContractAndGetArguments: function (test) {
+
+        var taskNode = NodeFactory.create("TaskNode", {contract : [{name: "something", direction: Argument.Direction.in}]});
+
+        test.ok(taskNode);
+        test.ok(taskNode instanceof TaskNode);
+        test.ok(taskNode.contract);
+
+        test.ok(taskNode.arguments.in.get("something") == undefined);
+
+        test.done();
+    },
+    testCanInjectConditionNodeWithContract: function (test) {
+
+        var taskNode = NodeFactory.create("ConditionNode", {condition: "", trueSuccessor: NodeFactory.create("TaskNode"),
+            contract : [{name: "something", direction: Argument.Direction.in}]});
+
+        test.ok(taskNode);
+        test.ok(taskNode instanceof ConditionNode);
+        test.ok(taskNode.contract);
+
+        test.ok(taskNode.contract.createArguments().in.get("something") == undefined);
+
+        test.done();
+    },
+    testCanInjectLoopNodeWithContract: function (test) {
+
+        var taskNode = NodeFactory.create("LoopNode", {condition: "", startNode: NodeFactory.create("TaskNode"),
+            contract : [{name: "something", direction: Argument.Direction.in}]});
+
+        test.ok(taskNode);
+        test.ok(taskNode instanceof LoopNode);
+        test.ok(taskNode.contract);
+
+        test.ok(taskNode.contract.createArguments().in.get("something") == undefined);
+
+        test.done();
+    },
     t5estCanInjectConditionNode: function (test) {
-        var conditionNode = Injector.resolve({target: 'ConditionNode'})
+        var conditionNode = Injector.resolve({target: 'ConditionNode'});
         test.done();
     },
     t6estTaskCanExecute: function (test) {
