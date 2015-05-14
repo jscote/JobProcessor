@@ -3,20 +3,25 @@
  */
 (function (_, q, util, base) {
 
-    var p = require('path');
-    var ProcessorLoader = require('../index').ProcessorLoader;
-    var NodeFactory = require('../index').NodeFactory;
+    var TaskContract = require('../index').TaskContract;
+    var Argument = require('../index').Argument;
 
     function TestTaskNode(serviceMessage) {
         base.TaskNode.call(this, serviceMessage);
         this.name = 'TestTaskNode';
+
+        this.contract = new TaskContract(
+            [
+                {name: "something", direction: Argument.Direction.in},
+                {name: "somethingElse", direction: Argument.Direction.inOut},
+                {name: "somethingOut", direction: Argument.Direction.out}
+            ]);
     }
 
     util.inherits(TestTaskNode, base.TaskNode);
 
     TestTaskNode.prototype.handleRequest = function (context) {
         var dfd = q.defer();
-        var self = this;
 
         process.nextTick(function () {
 
@@ -84,7 +89,6 @@
 
     Test4TaskNode.prototype.handleRequest = function (context) {
         var dfd = q.defer();
-        var self = this;
 
         process.nextTick(function () {
 
@@ -117,7 +121,6 @@
 
     TestLoopTaskNode.prototype.handleRequest = function (context) {
 
-        var self = this;
         var dfd = q.defer();
 
         process.nextTick(function () {
@@ -151,7 +154,6 @@
 
     Test2LoopTaskNode.prototype.handleRequest = function (context) {
 
-        var self = this;
         var dfd = q.defer();
 
         process.nextTick(function () {
@@ -179,7 +181,6 @@
 
     TestPredecessorToLoopTaskNode.prototype.handleRequest = function (context) {
 
-        var self = this;
         var dfd = q.defer();
 
         process.nextTick(function () {
@@ -209,7 +210,6 @@
 
     TestCompensationToLoopTaskNode.prototype.handleRequest = function (context) {
 
-        var self = this;
         var dfd = q.defer();
 
         process.nextTick(function () {
@@ -238,7 +238,6 @@
 
     TestSuccessorToLoopTaskNode.prototype.handleRequest = function (context) {
 
-        var self = this;
         var dfd = q.defer();
 
         process.nextTick(function () {
@@ -265,7 +264,6 @@
 
     TestRequestCancellationTaskNode.prototype.handleRequest = function (context) {
 
-        var self = this;
         var dfd = q.defer();
 
         process.nextTick(function () {
@@ -286,7 +284,6 @@
 
     TestConsoleLogTaskNode.prototype.handleRequest = function (context) {
 
-        var self = this;
         var dfd = q.defer();
 
         if (_.isUndefined(context.data)) context.data = {};

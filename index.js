@@ -80,7 +80,7 @@
     };
 
     ArgumentDefinitionCollection.prototype.setArgumentObject = function (argument) {
-        if (!(argument instanceof Argument)) {
+        if (!(argument instanceof ArgumentDefinition)) {
             throw Error("Not a valid argument");
         }
 
@@ -195,7 +195,7 @@
                 throw Error("direction is invalid");
             }
 
-            _definitions.setArgumentObject(new Argument(definition));
+            _definitions.setArgumentObject(new ArgumentDefinition(definition));
         });
     }
 
@@ -330,14 +330,11 @@
                 if(!(value instanceof TaskContract )) throw Error("Contract should be of TaskContract type.");
 
                 _contract = value;
-                _arguments = _contract.createArguments();
             },
             get: function () {
                 return _contract;
             }
         });
-        var _arguments;
-        Object.defineProperty(this, "arguments", {enumerable: true, get: function(){return _arguments;}});
 
         this.configuration = engineConfig;
         this.messaging = serviceMessage;
@@ -408,27 +405,35 @@
 
     var evaluateCondition = function (condition, executionContext) {
         var dfd = q.defer();
-        if (_.isFunction(condition)) {
-            q.fcall(condition, executionContext).then(function (conditionResult) {
-                dfd.resolve(conditionResult);
-            }).fail(function () {
-                dfd.resolve(false);
-            });
-        }
-
-        if (_.isArray(condition) || _.isString(condition)) {
-            var ruleSets = [];
-            if (_.isString(condition)) {
-                ruleSets.push(condition);
-            } else {
-                ruleSets = condition;
+        var innerEvaluate = function(condition, executionContext, dfd) {
+            if (_.isFunction(condition)) {
+                q.fcall(condition, executionContext).then(function (conditionResult) {
+                    dfd.resolve(conditionResult);
+                }).fail(function () {
+                    dfd.resolve(false);
+                });
             }
 
-            ruleEngine.evaluate(executionContext, ruleSets).then(function (conditionResult) {
-                dfd.resolve(conditionResult.isTrue);
-            }).fail(function () {
-                dfd.resolve(false);
-            });
+            if (_.isArray(condition) || _.isString(condition)) {
+                var ruleSets = [];
+                if (_.isString(condition)) {
+                    ruleSets.push(condition);
+                } else {
+                    ruleSets = condition;
+                }
+
+                ruleEngine.evaluate(executionContext, ruleSets).then(function (conditionResult) {
+                    dfd.resolve(conditionResult.isTrue);
+                }).fail(function () {
+                    dfd.resolve(false);
+                });
+            }
+        };
+
+        if(_.isObject(condition) && !_.isUndefined(condition.contract) && !_.isUndefined(condition.condition)) {
+            innerEvaluate(condition.condition, executionContext, dfd);
+        } else {
+            innerEvaluate(condition, executionContext, dfd);
         }
 
         return dfd.promise;

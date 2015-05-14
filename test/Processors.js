@@ -77,11 +77,11 @@ module.exports = {
     },
     t2estTaskNodeCanOnlyHaveANodeObjectSuccessor: function (test) {
         test.doesNotThrow(function () {
-            var taskNode = NodeFactory.create('TaskNode', {successor: NodeFactory.create('TaskNode')});
+            NodeFactory.create('TaskNode', {successor: NodeFactory.create('TaskNode')});
         });
 
         test.throws(function () {
-            var taskNode = NodeFactory.create('TaskNode', {successor: "something"});
+            NodeFactory.create('TaskNode', {successor: "something"});
         });
 
         test.done();
@@ -89,14 +89,14 @@ module.exports = {
     t3estConditionNodeHasMinimumRequirements: function (test) {
 
         test.doesNotThrow(function () {
-            var conditionTask = NodeFactory.create('ConditionNode', {
+            NodeFactory.create('ConditionNode', {
                 condition: {},
                 trueSuccessor: NodeFactory.create('TaskNode')
             });
         });
 
         test.doesNotThrow(function () {
-            var conditionTask = NodeFactory.create('ConditionNode', {
+            NodeFactory.create('ConditionNode', {
                 condition: {},
                 trueSuccessor: NodeFactory.create('TaskNode'),
                 successor: NodeFactory.create('TaskNode')
@@ -105,13 +105,13 @@ module.exports = {
         });
 
         test.throws(function () {
-            var conditionTask = NodeFactory.create('ConditionNode', {
+            NodeFactory.create('ConditionNode', {
                 condition: {}
             });
         });
 
         test.throws(function () {
-            var conditionTask = NodeFactory.create('ConditionNode');
+            NodeFactory.create('ConditionNode');
         });
         test.done();
     },
@@ -126,7 +126,12 @@ module.exports = {
     },
     testCanInjectTaskNodeWithContract: function (test) {
 
-        var taskNode = NodeFactory.create("TaskNode", {contract : [{name: "something", direction: Argument.Direction.in}]});
+        var taskNode = NodeFactory.create("TaskNode", {
+            contract: [{
+                name: "something",
+                direction: Argument.Direction.in
+            }]
+        });
 
         test.ok(taskNode);
         test.ok(taskNode instanceof TaskNode);
@@ -136,22 +141,12 @@ module.exports = {
 
         test.done();
     },
-    testCanInjectTaskNodeWithContractAndGetArguments: function (test) {
-
-        var taskNode = NodeFactory.create("TaskNode", {contract : [{name: "something", direction: Argument.Direction.in}]});
-
-        test.ok(taskNode);
-        test.ok(taskNode instanceof TaskNode);
-        test.ok(taskNode.contract);
-
-        test.ok(taskNode.arguments.in.get("something") == undefined);
-
-        test.done();
-    },
     testCanInjectConditionNodeWithContract: function (test) {
 
-        var taskNode = NodeFactory.create("ConditionNode", {condition: "", trueSuccessor: NodeFactory.create("TaskNode"),
-            contract : [{name: "something", direction: Argument.Direction.in}]});
+        var taskNode = NodeFactory.create("ConditionNode", {
+            condition: "", trueSuccessor: NodeFactory.create("TaskNode"),
+            contract: [{name: "something", direction: Argument.Direction.in}]
+        });
 
         test.ok(taskNode);
         test.ok(taskNode instanceof ConditionNode);
@@ -161,10 +156,30 @@ module.exports = {
 
         test.done();
     },
+    testCanGetArgumentsFromInheritedClass: function (test) {
+        var node = NodeFactory.create("TestTaskNode");
+
+        var arguments = node.contract.createArguments();
+        test.ok(arguments.in.get("something") == undefined);
+        test.ok(arguments.in.getArgumentObject("something").direction == Argument.Direction.in);
+
+        test.ok(arguments.in.get("somethingElse") == undefined);
+        test.ok(arguments.in.getArgumentObject("somethingElse").direction == Argument.Direction.inOut);
+
+        test.ok(arguments.out.get("somethingElse") == undefined);
+        test.ok(arguments.out.getArgumentObject("somethingElse").direction == Argument.Direction.inOut);
+
+        test.ok(arguments.out.get("somethingOut") == undefined);
+        test.ok(arguments.out.getArgumentObject("somethingOut").direction == Argument.Direction.out);
+
+        test.done();
+    },
     testCanInjectLoopNodeWithContract: function (test) {
 
-        var taskNode = NodeFactory.create("LoopNode", {condition: "", startNode: NodeFactory.create("TaskNode"),
-            contract : [{name: "something", direction: Argument.Direction.in}]});
+        var taskNode = NodeFactory.create("LoopNode", {
+            condition: "", startNode: NodeFactory.create("TaskNode"),
+            contract: [{name: "something", direction: Argument.Direction.in}]
+        });
 
         test.ok(taskNode);
         test.ok(taskNode instanceof LoopNode);
@@ -175,7 +190,7 @@ module.exports = {
         test.done();
     },
     t5estCanInjectConditionNode: function (test) {
-        var conditionNode = Injector.resolve({target: 'ConditionNode'});
+        Injector.resolve({target: 'ConditionNode'});
         test.done();
     },
     t6estTaskCanExecute: function (test) {
@@ -224,7 +239,7 @@ module.exports = {
     testIteratorNode_WhenValidObjectFunctionIterator_IsInstantiated: function (test) {
         var iteratorNode = NodeFactory.create("IteratorNode", {
             iterator: new (function () {
-                this.prop1 = "prop1", this.prop2 = "prop2"
+                this.prop1 = "prop1"; this.prop2 = "prop2";
             })(),
             successor: NodeFactory.create("NoOpTaskNode"),
             startNode: NodeFactory.create("NoOpTaskNode")
@@ -242,7 +257,7 @@ module.exports = {
 
         var request = {
             data: new (function () {
-                this.prop1 = "prop1", this.prop2 = "prop2"
+                this.prop1 = "prop1"; this.prop2 = "prop2";
             })()
         };
         var context = new ExecutionContext({request: request});
@@ -373,7 +388,39 @@ module.exports = {
 
         var node = NodeFactory.create('ConditionNode', {
             condition: function () {
-                return true
+                return true;
+            },
+            successor: null,
+            trueSuccessor: NodeFactory.create('TestTaskNode')
+        });
+
+        var request = {data: []};
+        var context = new ExecutionContext({request: request});
+
+        node.execute(context).then(function (responseContext) {
+
+            test.ok(responseContext.data.length == 1);
+            test.ok(responseContext.data[0] == "executed 1");
+
+            test.ok(responseContext.request.data.length == 1, "Unexpected number of items in request data");
+            test.ok(responseContext.request.data[0] == "request data 1");
+
+            test.ok(responseContext.errors.length == 0, "Errors doesn't have expected number of items");
+            test.ok(responseContext.isSuccess);
+
+            test.done();
+        });
+    },
+    t12estTaskCanExecuteConditionalWithContract: function (test) {
+
+        var node = NodeFactory.create('ConditionNode', {
+            condition: {
+                condition: function () {
+                    return true;
+                },
+                contract: [
+                    {name: "something", direction: Argument.Direction.in}
+                ]
             },
             successor: null,
             trueSuccessor: NodeFactory.create('TestTaskNode')
@@ -400,7 +447,7 @@ module.exports = {
 
         var node = NodeFactory.create('ConditionNode', {
             condition: function () {
-                return true
+                return true;
             },
             successor: NodeFactory.create('Test2TaskNode'),
             trueSuccessor: NodeFactory.create('TestTaskNode')
@@ -1043,6 +1090,45 @@ module.exports = {
             }
         });
 
+
+        var request = {data: {index: 0}};
+        var context = new ExecutionContext({request: request});
+
+        node.execute(context).then(function (response) {
+
+            try {
+                test.ok(context.data.steps.length == 2, "Unexpected response items");
+                test.ok(context.data.steps[0] == "executed in loop");
+                test.ok(context.data.steps[1] == "executed in loop");
+
+                test.ok(context.request.data.index == 2);
+
+
+                test.ok(response.errors.length == 0, "Errors doesn't have expected number of items");
+                test.ok(response.isSuccess == true, "isSuccess should be false");
+            } catch (e) {
+                test.ok(false, "Error while executing");
+                console.log(e.message);
+            }
+
+
+            test.done();
+        });
+    },
+    testLoopTaskWithContractNoPredecessorNoSuccessorShouldLoopTwice: function (test) {
+        var node = NodeFactory.create('LoopNode', {
+            startNode: NodeFactory.create('TestLoopTaskNode'),
+            condition: {
+                condition: function (fact) {
+                    return fact.request.data.index < 2;
+                },
+                contract: [
+                    {name: "something", direction: Argument.Direction.in}
+                ]
+            }
+        });
+
+
         var request = {data: {index: 0}};
         var context = new ExecutionContext({request: request});
 
@@ -1288,7 +1374,7 @@ module.exports = {
 
             processor.execute(request).then(function (response) {
 
-                var p = processor;
+
                 try {
 
                     test.ok(response.data.steps.length == 4, "Unexpected response items");
@@ -1321,7 +1407,6 @@ module.exports = {
             request.data = {index: 0};
 
             processor.execute(request).then(function (response) {
-                var p = processor;
                 try {
                     test.ok(response.data.steps.length == 6, "Unexpected response items");
                     test.ok(response.data.steps[0] == "passed in predecessor");
@@ -1355,7 +1440,6 @@ module.exports = {
             request.person = new Person(30, 'F', "Married");
 
             processor.execute(request).then(function (response) {
-                var p = processor;
                 try {
                     test.ok(response.data.steps.length == 4, "Unexpected response items");
                     test.ok(response.data.steps[0] == "passed in predecessor");
@@ -1386,7 +1470,6 @@ module.exports = {
             request.data.index = 0;
 
             processor.execute(request).then(function (response) {
-                var p = processor;
                 try {
                     test.ok(response.data.steps.length == 6, "Unexpected response items");
                     test.ok(response.data.steps[0] == "passed in predecessor");
@@ -1421,7 +1504,6 @@ module.exports = {
             request.data.index = 0;
 
             processor.execute(request).then(function (response) {
-                var p = processor;
                 try {
                     test.ok(response.data.steps.length == 2, "Unexpected response items");
                     test.ok(response.data.steps[0] == "passed in predecessor");
@@ -1453,7 +1535,6 @@ module.exports = {
             request.data.index = 0;
 
             processor.execute(request).then(function (response) {
-                var p = processor;
                 try {
                     test.ok(response.data.steps.length == 4, "Unexpected response items");
                     test.ok(response.data.steps[0] == "passed in predecessor");
@@ -1486,7 +1567,6 @@ module.exports = {
             request.data.index = 0;
 
             processor.execute(request).then(function (response) {
-                var p = processor;
                 try {
                     test.ok(response.data.steps.length == 2, "Unexpected response items");
                     test.ok(response.data.steps[0] == "passed in predecessor");
@@ -1517,7 +1597,6 @@ module.exports = {
             request.data = {index: 0};
 
             processor.execute(request).then(function (response) {
-                var p = processor;
                 try {
                     test.ok(response.data.steps.length == 3, "Unexpected response items");
                     test.ok(response.data.steps[0] == "passed in predecessor");
@@ -1589,7 +1668,7 @@ module.exports = {
     testArgumentCannotBeCreatedWithInvalidDirection: function (test) {
 
         test.throws(function () {
-            var arg = new Argument({name: 'testArgument', direction: "stuff", value: "test"});
+            new Argument({name: 'testArgument', direction: "stuff", value: "test"});
         });
         test.done();
 
@@ -1633,21 +1712,21 @@ module.exports = {
     testNoDefinitionsWillNotCreateContract: function (test) {
 
         test.throws(function () {
-            var contract = new TaskContract();
+            new TaskContract();
         });
 
         test.done();
     },
     testDefinitionWihtoutNameWillNotCreateContract: function (test) {
         test.throws(function () {
-            var contract = new TaskContract([{}]);
+            new TaskContract([{}]);
         });
 
         test.done();
     },
     testDefinitionsNotAnArrayWillNotCreateContract: function (test) {
         test.throws(function () {
-            var contract = new TaskContract({});
+            new TaskContract({});
         });
         test.done();
     },
