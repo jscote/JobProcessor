@@ -1,7 +1,7 @@
 /**
  * Created by jean-sebastiencote on 11/1/14.
  */
-(function (util, _, q, process, Injector, serviceMessage) {
+(function (util, _, q, process, Injector, serviceMessage, contract) {
 
     'use strict';
     /*
@@ -24,190 +24,7 @@
 
 
     Injector.register({dependency: serviceMessage, name: 'serviceMessage'});
-    var ruleEngine = Injector.resolve({target: 'ruleEngine'});
-
-    Argument.Direction = {
-        in: 1,
-        out: 2,
-        inOut: 3
-    };
-
-    function ArgumentDefinition(options) {
-        if (!_.isUndefined(options.direction) && !(options.direction === Argument.Direction.in
-            || options.direction === Argument.Direction.inOut
-            || options.direction === Argument.Direction.out)) {
-            throw Error("Invalid Direction");
-        }
-        var _direction = _.isUndefined(options.direction) ? Argument.Direction.inOut : options.direction;
-        Object.defineProperty(this, 'name', {writable: false, enumerable: true, value: options.name});
-        Object.defineProperty(this, 'direction', {
-            get: function () {
-                return _direction;
-            },
-            set: function (value) {
-                if (value != _direction && !(options.direction === 0 || options.direction === 1 || options.direction === 3)) {
-                    _direction = value;
-                }
-            }
-        })
-
-    }
-
-
-    function Argument(options) {
-        ArgumentDefinition.call(this, options);
-        Object.defineProperty(this, 'value', {writable: true, enumerable: true, value: options.value});
-    }
-
-    util.inherits(Argument, ArgumentDefinition);
-
-    Argument.prototype.flatten = function () {
-        return this.value;
-    };
-
-    function ArgumentDefinitionCollection(argumentDirection) {
-
-        Object.defineProperty(this, "direction", {writable: false, enumerable: true, value: argumentDirection});
-    }
-
-
-    ArgumentDefinitionCollection.prototype.getArgumentObject = function (argumentName) {
-        if (_.isUndefined(this[argumentName])) {
-            throw Error("Argument doesn't exist");
-        }
-
-        return this[argumentName];
-    };
-
-    ArgumentDefinitionCollection.prototype.setArgumentObject = function (argument) {
-        if (!(argument instanceof ArgumentDefinition)) {
-            throw Error("Not a valid argument");
-        }
-
-        if (argument.direction !== Argument.Direction.in
-            && argument.direction !== Argument.Direction.out
-            && argument.direction !== Argument.Direction.inOut) {
-            throw Error("Argument has incompatible direction");
-        }
-
-        this[argument.name] = argument;
-        return argument;
-    };
-
-
-    function ArgumentCollection(argumentDirection) {
-
-        if (_.isUndefined(argumentDirection) || !(argumentDirection === Argument.Direction.in
-            || argumentDirection === Argument.Direction.out)) {
-            throw Error("Invalid Direction");
-        }
-
-        ArgumentDefinitionCollection.call(this, argumentDirection);
-
-    }
-
-    util.inherits(ArgumentCollection, ArgumentDefinitionCollection);
-
-    ArgumentCollection.prototype.get = function (argumentName) {
-        if (_.isUndefined(this[argumentName])) {
-            throw Error("Argument doesn't exist");
-        }
-
-        return this[argumentName].value;
-    };
-
-    ArgumentCollection.prototype.flatten = function () {
-        var obj = {};
-
-        for (var prop in this) {
-            if (this[prop] instanceof Argument) {
-                obj[prop] = this[prop].flatten();
-            }
-        }
-        return obj;
-    };
-
-    ArgumentCollection.prototype.set = function (argumentName, argumentValue) {
-        if (_.isUndefined(this[argumentName])) {
-            throw Error("Argument doesn't exist");
-        }
-
-        this[argumentName].value = argumentValue;
-        return this[argumentName].value;
-    };
-
-    ArgumentCollection.prototype.setArgumentObject = function (argument) {
-        if (!(argument instanceof Argument)) {
-            throw Error("Not a valid argument");
-        }
-
-        if (!(argument.direction === this.direction) && (argument.direction !== Argument.Direction.inOut)) {
-            throw Error("Argument has incompatible direction");
-        }
-
-        this[argument.name] = argument;
-        return argument;
-    };
-
-
-    function Arguments() {
-        var _in = new ArgumentCollection(Argument.Direction.in);
-        var _out = new ArgumentCollection(Argument.Direction.out);
-
-        Object.defineProperty(this, "in", {writable: false, enumerable: true, value: _in});
-        Object.defineProperty(this, "out", {writable: false, enumerable: true, value: _out});
-    }
-
-    Arguments.prototype.add = function (arg) {
-        if (arg instanceof Argument) {
-            switch (arg.direction) {
-                case Argument.Direction.in:
-                    this.in.setArgumentObject(arg);
-                    break;
-                case Argument.Direction.out:
-                    this.out.setArgumentObject(arg);
-                    break;
-                case Argument.Direction.inOut:
-                    this.in.setArgumentObject(arg);
-                    this.out.setArgumentObject(arg);
-                    break;
-            }
-
-            return arg;
-        }
-
-        return null;
-    };
-
-    function TaskContract(argumentDefinitions) {
-        if (!_.isArray(argumentDefinitions)) {
-            throw Error("Expecting an array of argument definitions");
-        }
-        var _definitions = new ArgumentDefinitionCollection(Argument.Direction.inOut);
-        Object.defineProperty(this, "definitions", {enumerable: true, writable: false, value: _definitions});
-
-        _.forEach(argumentDefinitions, function (definition) {
-            if (_.isUndefined(definition.name)) throw Error("definition should have a name");
-            if (!_.isUndefined(definition.direction) &&
-                (definition.direction !== Argument.Direction.in
-                && definition.direction !== Argument.Direction.out
-                && definition.direction !== Argument.Direction.inOut)) {
-                throw Error("direction is invalid");
-            }
-
-            _definitions.setArgumentObject(new ArgumentDefinition(definition));
-        });
-    }
-
-    TaskContract.prototype.createArguments = function () {
-        var args = new Arguments();
-
-        _.forEach(this.definitions, function (definition) {
-            args.add(new Argument(definition));
-        });
-
-        return args;
-    };
+    var ruleEngine = Injector.resolve({target: "ruleEngine"});
 
     //var logger = log4js.getLogger();
     //logger.setLevel('ERROR');
@@ -327,7 +144,7 @@
         Object.defineProperty(this, "contract", {
             enumerable: true,
             set: function (value) {
-                if(!(value instanceof TaskContract )) throw Error("Contract should be of TaskContract type.");
+                if(!(value instanceof contract.Contract )) throw Error("Contract should be of Contract type.");
 
                 _contract = value;
             },
@@ -349,7 +166,7 @@
         if (_.isUndefined(this.name)) this.name = params.name;
 
         if (!_.isUndefined(params.contract)) {
-            this.contract = new TaskContract(params.contract);
+            this.contract = new contract.Contract(params.contract);
         }
 
     };
@@ -1194,9 +1011,6 @@
     exports.IteratorNode = IteratorNode;
     exports.NoOpTaskNode = NoOpTaskNode;
     exports.ExecutionContext = ExecutionContext;
-    exports.Argument = Argument;
-    exports.Arguments = Arguments;
-    exports.TaskContract = TaskContract;
 
     Injector.setBasePath(__dirname);
     Injector
@@ -1219,5 +1033,6 @@
     //require('log4js'),
     require('jsai-injector'),
     require('jsai-servicemessage'),
-    require('jsai-ruleengine/RuleEvaluator')
+    require('jsai-contract'),
+    require('jsai-ruleengine')
 );

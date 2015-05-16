@@ -8,9 +8,9 @@ global.Injector = require('jsai-injector');
 var p = require('path');
 
 var Processor = require('../index').Processor;
-var Arguments = require('../index').Arguments;
-var Argument = require('../index').Argument;
-var TaskContract = require('../index').TaskContract;
+var Arguments = require('jsai-contract').Arguments;
+var Argument = require('jsai-contract').Argument;
+var TaskContract = require('jsai-contract').Contract;
 var NodeFactory = require('../index').NodeFactory;
 var TaskNode = require('../index').TaskNode;
 var ConditionNode = require('../index').ConditionNode;
@@ -158,6 +158,7 @@ module.exports = {
     },
     testCanGetArgumentsFromInheritedClass: function (test) {
         var node = NodeFactory.create("TestTaskNode");
+
 
         var arguments = node.contract.createArguments();
         test.ok(arguments.in.get("something") == undefined);

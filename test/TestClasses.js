@@ -3,8 +3,8 @@
  */
 (function (_, q, util, base) {
 
-    var TaskContract = require('../index').TaskContract;
-    var Argument = require('../index').Argument;
+    var TaskContract = require('jsai-contract').Contract;
+    var Argument = require('jsai-contract').Argument;
 
     function TestTaskNode(serviceMessage) {
         base.TaskNode.call(this, serviceMessage);
@@ -351,6 +351,37 @@
         });
 
         return dfd.promise;
+    };
+
+
+    originalFunction = function (context) {
+        var dfd = q.defer();
+        var self = this;
+
+        //If the vote is rejected because of an invalid voting descriptor, a lot will be missing for saving
+        try {
+            var obj = this.provider.create();
+            obj.setFromVotingCombination({
+                voteId: context.currentIteration.voteId,
+                voterId: context.request.data.voterId,
+                votingCombination: context.currentIteration.votingCombination
+            });
+            q.all(self.provider.save(obj)).then(function () {
+                console.log("saved");
+                dfd.resolve(context);
+            }).fail(function (error) {
+                dfd.reject(error);
+            });
+
+
+        }
+        catch (error) {
+            dfd.reject(error);
+            console.log(error);
+        } finally {
+            return dfd.promise;
+        }
+
     };
 
     ReWrittenhandleRequest = function (arguments) {
