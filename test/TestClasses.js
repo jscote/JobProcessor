@@ -178,6 +178,87 @@
 
     };
 
+    function TestLoopTaskNodeWithContract(serviceMessage) {
+        base.TaskNode.call(this, serviceMessage);
+        this.name = 'TestLoopTaskNodeWithContract';
+
+        this.contract = new TaskContract(
+            [
+                {name: "steps", direction: Argument.Direction.inOut}
+            ]);
+    }
+
+    util.inherits(TestLoopTaskNodeWithContract, base.TaskNode);
+
+    TestLoopTaskNodeWithContract.prototype.handleRequest = function (context, args) {
+
+        var dfd = q.defer();
+
+        process.nextTick(function () {
+
+            context.request.data.index++;
+
+            if (_.isUndefined(context.data.steps)) {
+                context.data.steps = [];
+            }
+
+            if (!_.isUndefined(context.request.person) && !_.isUndefined(context.request.data.changeAge) && context.request.data.changeAge == true) {
+                context.request.person.age = 60;
+            }
+
+            if (!Array.isArray(context.data.steps)) context.data.steps = [];
+            context.data.steps.push("executed in loop");
+
+            var steps = args.in.get("steps");
+            if(_.isUndefined(steps) || _.isNull(steps)) steps = [];
+            steps.push("executed in loop from arguments");
+            args.out.set("steps", steps);
+
+            return dfd.resolve(context);
+        });
+
+        return dfd.promise;
+
+    };
+
+    function Test2LoopTaskNodeWithContract(serviceMessage) {
+        base.TaskNode.call(this, serviceMessage);
+        this.name = 'Test2LoopTaskNodeWithContract';
+
+        this.contract = new TaskContract(
+            [
+                {name: "steps", direction: Argument.Direction.inOut}
+            ]);
+
+    }
+
+    util.inherits(Test2LoopTaskNodeWithContract, base.TaskNode);
+
+    Test2LoopTaskNodeWithContract.prototype.handleRequest = function (context, args) {
+
+        var dfd = q.defer();
+
+        process.nextTick(function () {
+
+            if (_.isUndefined(context.data.steps)) {
+                context.data.steps = [];
+            }
+
+            context.data.steps.push("executed in loop 2");
+
+            var steps = args.in.get("steps");
+            if(_.isUndefined(steps) || _.isNull(steps)) steps = [];
+            steps.push("executed in loop 2 from arguments");
+            args.out.set("steps", steps);
+
+
+            return dfd.resolve(context);
+        });
+
+        return dfd.promise;
+
+    };
+
     function Test2LoopTaskNode(serviceMessage) {
         base.TaskNode.call(this, serviceMessage);
         this.name = 'Test2LoopTaskNode';
@@ -234,6 +315,46 @@
 
     };
 
+    function TestPredecessorToLoopTaskNodeWithContract(serviceMessage) {
+        base.TaskNode.call(this, serviceMessage);
+        this.name = 'TestPredecessorToLoopTaskNodeWithContract';
+
+        this.contract = new TaskContract(
+            [
+                {name: "steps", direction: Argument.Direction.inOut}
+            ]);
+    }
+
+    util.inherits(TestPredecessorToLoopTaskNodeWithContract, base.TaskNode);
+
+    TestPredecessorToLoopTaskNodeWithContract.prototype.handleRequest = function (context, args) {
+
+        var dfd = q.defer();
+
+        process.nextTick(function () {
+
+            if (_.isUndefined(context.data)) context.data = {};
+
+            if (_.isUndefined(context.data.steps)) {
+                context.data.steps = [];
+            }
+
+            var steps = args.in.get("steps");
+            if(_.isUndefined(steps) || _.isNull(steps)) steps = [];
+            steps.push("passed in predecessor from arguments");
+            args.out.set("steps", steps);
+
+            context.data.steps.push("passed in predecessor");
+
+
+            return dfd.resolve(context);
+        });
+
+        return dfd.promise;
+
+    };
+
+
     function TestCompensationToLoopTaskNode(serviceMessage) {
         base.TaskNode.call(this, serviceMessage);
         this.name = 'TestCompensationToLoopTaskNode';
@@ -279,6 +400,41 @@
             }
 
             context.data.steps.push("passed in successor");
+
+
+            return dfd.resolve(context);
+        });
+
+        return dfd.promise;
+
+    };
+
+    function TestSuccessorToLoopTaskNodeWithContract(serviceMessage) {
+        base.TaskNode.call(this, serviceMessage);
+        this.name = 'TestSuccessorToLoopTaskNodeWithContract';
+        this.contract = new TaskContract(
+            [
+                {name: "steps", direction: Argument.Direction.inOut}
+            ]);
+    }
+
+    util.inherits(TestSuccessorToLoopTaskNodeWithContract, base.TaskNode);
+
+    TestSuccessorToLoopTaskNodeWithContract.prototype.handleRequest = function (context, args) {
+
+        var dfd = q.defer();
+
+        process.nextTick(function () {
+            if (_.isUndefined(context.data.steps)) {
+                context.data.steps = [];
+            }
+
+            context.data.steps.push("passed in successor");
+
+            var steps = args.in.get("steps");
+            if(_.isUndefined(steps) || _.isNull(steps)) steps = [];
+            steps.push("passed in successor from arguments");
+            args.out.set("steps", steps);
 
 
             return dfd.resolve(context);
@@ -454,9 +610,13 @@
     module.exports.Test3TaskNode = Test3TaskNode;
     module.exports.Test4TaskNode = Test4TaskNode;
     module.exports.TestLoopTaskNode = TestLoopTaskNode;
+    module.exports.TestLoopTaskNodeWithContract = TestLoopTaskNodeWithContract;
     module.exports.Test2LoopTaskNode = Test2LoopTaskNode;
+    module.exports.Test2LoopTaskNodeWithContract = Test2LoopTaskNodeWithContract;
     module.exports.TestPredecessorToLoopTaskNode = TestPredecessorToLoopTaskNode;
+    module.exports.TestPredecessorToLoopTaskNodeWithContract = TestPredecessorToLoopTaskNodeWithContract;
     module.exports.TestSuccessorToLoopTaskNode = TestSuccessorToLoopTaskNode;
+    module.exports.TestSuccessorToLoopTaskNodeWithContract = TestSuccessorToLoopTaskNodeWithContract;
     module.exports.TestCompensationToLoopTaskNode = TestCompensationToLoopTaskNode;
     module.exports.TestRequestCancellationTaskNode = TestRequestCancellationTaskNode;
     module.exports.TestConsoleLogTaskNode = TestConsoleLogTaskNode;

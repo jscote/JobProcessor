@@ -53,8 +53,10 @@ module.exports = {
             .register({dependency: '/TestClasses::Test3TaskNode', name: 'Test3TaskNode'})
             .register({dependency: '/TestClasses::Test4TaskNode', name: 'Test4TaskNode'})
             .register({dependency: '/TestClasses::TestLoopTaskNode', name: 'TestLoopTaskNode'})
+            .register({dependency: '/TestClasses::TestLoopTaskNodeWithContract', name: 'TestLoopTaskNodeWithContract'})
             .register({dependency: '/TestClasses::TestConsoleLogTaskNode', name: 'TestConsoleLogTaskNode'})
             .register({dependency: '/TestClasses::Test2LoopTaskNode', name: 'Test2LoopTaskNode'})
+            .register({dependency: '/TestClasses::Test2LoopTaskNodeWithContract', name: 'Test2LoopTaskNodeWithContract'})
             .register({
                 dependency: '/TestClasses::TestRequestCancellationTaskNode',
                 name: 'TestRequestCancellationTaskNode'
@@ -63,7 +65,13 @@ module.exports = {
                 dependency: '/TestClasses::TestPredecessorToLoopTaskNode',
                 name: 'TestPredecessorToLoopTaskNode'
             })
+            .register({
+                dependency: '/TestClasses::TestPredecessorToLoopTaskNodeWithContract',
+                name: 'TestPredecessorToLoopTaskNodeWithContract'
+            })
             .register({dependency: '/TestClasses::TestSuccessorToLoopTaskNode', name: 'TestSuccessorToLoopTaskNode'})
+            .register({dependency: '/TestClasses::TestSuccessorToLoopTaskNodeWithContract', name: 'TestSuccessorToLoopTaskNodeWithContract'})
+
             .register({
                 dependency: '/TestClasses::TestCompensationToLoopTaskNode',
                 name: 'TestCompensationToLoopTaskNode'
@@ -241,7 +249,8 @@ module.exports = {
     testIteratorNode_WhenValidObjectFunctionIterator_IsInstantiated: function (test) {
         var iteratorNode = NodeFactory.create("IteratorNode", {
             iterator: new (function () {
-                this.prop1 = "prop1"; this.prop2 = "prop2";
+                this.prop1 = "prop1";
+                this.prop2 = "prop2";
             })(),
             successor: NodeFactory.create("NoOpTaskNode"),
             startNode: NodeFactory.create("NoOpTaskNode")
@@ -259,7 +268,8 @@ module.exports = {
 
         var request = {
             data: new (function () {
-                this.prop1 = "prop1"; this.prop2 = "prop2";
+                this.prop1 = "prop1";
+                this.prop2 = "prop2";
             })()
         };
         var context = new ExecutionContext({request: request});
@@ -1809,6 +1819,50 @@ module.exports = {
 
                     test.ok(response.data.aTest == "something");
                     test.ok(response.data.bTest == "this is inOut")
+                } catch (e) {
+                    test.ok(false, "Error while executing");
+                    console.log(e.message);
+                }
+
+
+                test.done();
+            });
+        });
+    },
+    executeComplexProcessor_WithContract_IsSuccessful: function (test) {
+
+        Processor.getProcessor('TestProcessorWithLoopInRuleEngineWithContract').then(function (processor) {
+
+            var request = new processor.messaging.ServiceMessage();
+
+            request.person = new Person(30, 'F', "Married");
+            request.data.index = 0;
+
+            processor.execute(request).then(function (response) {
+                try {
+                    test.ok(response.data.steps.length == 6, "Unexpected response items");
+                    test.ok(response.data.steps[0] == "passed in predecessor");
+                    test.ok(response.data.steps[1] == "executed in loop");
+                    test.ok(response.data.steps[2] == "executed in loop 2");
+                    test.ok(response.data.steps[3] == "executed in loop");
+                    test.ok(response.data.steps[4] == "executed in loop 2");
+                    test.ok(response.data.steps[5] == "passed in successor");
+
+                    test.ok(response.data.stepsFromArguments.length == 6, "Should expect steps from arguments");
+                    test.ok(response.data.stepsFromArguments[0] == "passed in predecessor from arguments", "Expecting 'passed in predecessor from arguments'");
+                    test.ok(response.data.stepsFromArguments[1] == "executed in loop from arguments", "Expecting 'executed in loop from arguments'");
+                    test.ok(response.data.stepsFromArguments[2] == "executed in loop 2 from arguments", "Expecting 'executed in loop 2 from arguments'");
+                    test.ok(response.data.stepsFromArguments[3] == "executed in loop from arguments", "Expecting 'executed in loop from arguments'");
+                    test.ok(response.data.stepsFromArguments[4] == "executed in loop 2 from arguments", "Expecting 'executed in loop 2 from arguments'");
+                    test.ok(response.data.stepsFromArguments[5] == "passed in successor from arguments", "Expecting 'passed in successor from arguments'");
+
+
+
+                    test.ok(request.data.index == 2, 'Index is not correct');
+                    console.log(request.data.index);
+
+                    test.ok(response.errors.length == 0, "Errors doesn't have expected number of items");
+                    test.ok(response.isSuccess == true, "isSuccess should be false");
                 } catch (e) {
                     test.ok(false, "Error while executing");
                     console.log(e.message);
