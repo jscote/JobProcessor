@@ -1,7 +1,7 @@
 /**
  * Created by jean-sebastiencote on 11/1/14.
  */
-(function (util, _, q, process, Injector, serviceMessage, contract) {
+(function (util, _, q, process, Injector, serviceMessage, contract, rEngine, mapper) {
 
     'use strict';
     /*
@@ -144,7 +144,7 @@
         Object.defineProperty(this, "contract", {
             enumerable: true,
             set: function (value) {
-                if(!(value instanceof contract.Contract )) throw Error("Contract should be of Contract type.");
+                if (!(value instanceof contract.Contract )) throw Error("Contract should be of Contract type.");
 
                 _contract = value;
             },
@@ -152,6 +152,9 @@
                 return _contract;
             }
         });
+
+        Object.defineProperty(this, "mapIn", {enumerable: true, writable: true});
+        Object.defineProperty(this, "mapOut", {enumerable: true, writable: true});
 
         this.configuration = engineConfig;
         this.messaging = serviceMessage;
@@ -169,6 +172,27 @@
             this.contract = new contract.Contract(params.contract);
         }
 
+        if (!_.isUndefined(params.mapIn)) {
+            //let's rewrite the map for the in part.
+            var newInMap = {};
+            for (var prop in params.mapIn) {
+                (function (property) {
+                    newInMap[property] = {
+                        key: params.mapIn[property], transform: function (value, objfrom, objTo) {
+                            objTo.set(params.mapIn[property], value);
+                            return objTo.getArgumentObject(params.mapIn[property]);
+                        }
+                    }
+                })(prop);
+            }
+            this.mapIn = newInMap;
+        }
+
+        if (!_.isUndefined(params.mapOut)) {
+            this.mapOut = params.mapOut;
+        }
+
+
     };
 
     Node.prototype.execute = function (executionContext) {
@@ -176,8 +200,22 @@
         var dfd = q.defer();
         try {
             executionContext.visiting(self);
-            q.fcall(self.handleRequest.bind(self), executionContext).then(function (responseExecutionContext) {
+
+            var args = null;
+            if (!_.isUndefined(self.contract)) {
+                args = self.contract.createArguments();
+            }
+
+            if (!_.isUndefined(self.mapIn)) {
+                mapper.merge(executionContext, args.in, self.mapIn);
+            }
+
+            q.fcall(self.handleRequest.bind(self), executionContext, args).then(function (responseExecutionContext) {
                 executionContext.visited(self);
+
+                if (!_.isUndefined(self.mapOut)) {
+                    mapper.merge(args.out.flatten(), responseExecutionContext, self.mapOut);
+                }
 
                 if (responseExecutionContext.hasErrors && !responseExecutionContext.isCompensated) {
                     responseExecutionContext.isSuccess = false;
@@ -222,7 +260,7 @@
 
     var evaluateCondition = function (condition, executionContext) {
         var dfd = q.defer();
-        var innerEvaluate = function(condition, executionContext, dfd) {
+        var innerEvaluate = function (condition, executionContext, dfd) {
             if (_.isFunction(condition)) {
                 q.fcall(condition, executionContext).then(function (conditionResult) {
                     dfd.resolve(conditionResult);
@@ -247,7 +285,7 @@
             }
         };
 
-        if(_.isObject(condition) && !_.isUndefined(condition.contract) && !_.isUndefined(condition.condition)) {
+        if (_.isObject(condition) && !_.isUndefined(condition.contract) && !_.isUndefined(condition.condition)) {
             innerEvaluate(condition.condition, executionContext, dfd);
         } else {
             innerEvaluate(condition, executionContext, dfd);
@@ -859,7 +897,7 @@
                     parameters = innerDefinition[prop];
                     if (!_.isUndefined(parameters)) {
                         for (var paramProp in parameters) {
-                            if (paramProp == 'condition' || paramProp == 'iterator') {
+                            if (paramProp == 'condition' || paramProp == 'iterator' || paramProp == 'mapIn' || paramProp == 'mapOut') {
                                 inner[paramProp] = parameters[paramProp];
                             } else {
                                 inner[paramProp] = internalParse(parameters[paramProp]);
@@ -1034,5 +1072,6 @@
     require('jsai-injector'),
     require('jsai-servicemessage'),
     require('jsai-contract'),
-    require('jsai-ruleengine')
+    require('jsai-ruleengine'),
+    require('object-mapper')
 );

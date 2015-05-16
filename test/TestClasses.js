@@ -6,6 +6,39 @@
     var TaskContract = require('jsai-contract').Contract;
     var Argument = require('jsai-contract').Argument;
 
+    function TestWithContract(serviceMessage) {
+        base.TaskNode.call(this, serviceMessage);
+        this.name = "testWithContractNode";
+
+        this.contract = new TaskContract(
+            [
+                {name: "somethingIn", direction: Argument.Direction.in},
+                {name: "somethingInOut", direction: Argument.Direction.inOut},
+                {name: "somethingOut", direction: Argument.Direction.out}
+            ]);
+    }
+
+    util.inherits(TestWithContract, base.TaskNode);
+
+    TestWithContract.prototype.handleRequest = function (context, args) {
+        var dfd = q.defer();
+
+        process.nextTick(function () {
+            try {
+                args.out.set('somethingOut', args.in.get('somethingIn'));
+                args.out.set('somethingInOut', "this is inOut");
+
+                dfd.resolve(context);
+            }
+            catch (e) {
+                context.addError(e.message);
+                dfd.resolve(context);
+            }
+        });
+
+        return dfd.promise;
+    };
+
     function TestTaskNode(serviceMessage) {
         base.TaskNode.call(this, serviceMessage);
         this.name = 'TestTaskNode';
@@ -131,7 +164,7 @@
                 context.data.steps = [];
             }
 
-            if(!_.isUndefined(context.request.person) && !_.isUndefined(context.request.data.changeAge) && context.request.data.changeAge == true) {
+            if (!_.isUndefined(context.request.person) && !_.isUndefined(context.request.data.changeAge) && context.request.data.changeAge == true) {
                 context.request.person.age = 60;
             }
 
@@ -416,6 +449,7 @@
 
 
     module.exports.TestTaskNode = TestTaskNode;
+    module.exports.TestWithContract = TestWithContract;
     module.exports.Test2TaskNode = Test2TaskNode;
     module.exports.Test3TaskNode = Test3TaskNode;
     module.exports.Test4TaskNode = Test4TaskNode;

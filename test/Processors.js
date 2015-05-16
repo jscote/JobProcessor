@@ -47,6 +47,7 @@ module.exports = {
         Injector.setBasePath(__dirname);
 
         Injector
+            .register({dependency: '/TestClasses::TestWithContract', name: 'TestWithContract'})
             .register({dependency: '/TestClasses::TestTaskNode', name: 'TestTaskNode'})
             .register({dependency: '/TestClasses::Test2TaskNode', name: 'Test2TaskNode'})
             .register({dependency: '/TestClasses::Test3TaskNode', name: 'Test3TaskNode'})
@@ -1791,5 +1792,31 @@ module.exports = {
         test.ok(args.out.get("somethingElse") === undefined, "the value of out argument should not be defined yet");
 
         test.done();
+    },
+    executeProcessor_WithContract_IsSuccessful: function (test) {
+
+        Processor.getProcessor('TestProcessorWithContract').then(function (processor) {
+
+            var request = new processor.messaging.ServiceMessage();
+
+            request.data = {aTest: "something", bTest: "somethingElse"};
+
+            processor.execute(request).then(function (response) {
+                try {
+
+                    //Should return true because it is compensated.
+                    test.ok(response.isSuccess == true, "isSuccess should be false");
+
+                    test.ok(response.data.aTest == "something");
+                    test.ok(response.data.bTest == "this is inOut")
+                } catch (e) {
+                    test.ok(false, "Error while executing");
+                    console.log(e.message);
+                }
+
+
+                test.done();
+            });
+        });
     }
 };
