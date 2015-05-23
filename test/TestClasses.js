@@ -496,7 +496,7 @@
 
         var provider = Injector.resolve({target: 'votingCombinationProvider'});
 
-        var id = evalContext.in.get("votingDescriptorId");
+        var id = evalContext.fact.in.get("votingDescriptorId");
 
         provider.getVotingCombinationByVotingDescriptorId(id).then(function (combinations) {
             if (combinations.length == 0) {

@@ -34,6 +34,16 @@ var p = require('path');
                                 }
                             },
                             condition: ['CounterRuleSet', 'SomeTest'],
+                            mapIn: {
+                                CounterRuleSet_CounterRule: {"data.index": "counter"},
+                                SomeTest_Female: {},
+                                SomeTest_Female20To40: {}
+                            },
+                            mapOut: {
+                                CounterRuleSet_CounterRule: {"counter": "data.index"},
+                                SomeTest_Female: {},
+                                SomeTest_Female20To40: {}
+                            },
                             successor: {
                                 nodeType: 'TestSuccessorToLoopTaskNodeWithContract', parameters: {
                                     mapIn: {"data.stepsFromArguments": "steps"},

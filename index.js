@@ -258,7 +258,7 @@
         TaskNode.super_.prototype.initialize.call(this, params);
     };
 
-    var evaluateCondition = function (condition, executionContext) {
+    var evaluateCondition = function (condition, executionContext, mapIn, mapOut) {
         var dfd = q.defer();
         var innerEvaluate = function (condition, executionContext, dfd) {
             if (_.isFunction(condition)) {
@@ -277,7 +277,7 @@
                     ruleSets = condition;
                 }
 
-                ruleEngine.evaluate(executionContext, ruleSets).then(function (conditionResult) {
+                ruleEngine.evaluate(executionContext, ruleSets, mapIn, mapOut).then(function (conditionResult) {
                     dfd.resolve(conditionResult.isTrue);
                 }).fail(function () {
                     dfd.resolve(false);
@@ -365,7 +365,7 @@
         if (executionContext.isCancellationRequested) {
             dfd.resolve(executionContext);
         } else {
-            q.fcall(evaluateCondition, self.condition, executionContext).then(function (conditionResult) {
+            q.fcall(evaluateCondition, self.condition, executionContext, self.mapIn, self.mapOut).then(function (conditionResult) {
                 if (conditionResult) {
                     executionContext.visiting(self, 'Condition Evaluated true', 'Condition');
                     executionContext.visiting(self, '', 'Executing True Branch');
@@ -558,7 +558,7 @@
                 return;
             }
 
-            q.fcall(evaluateCondition, self.condition, executionContext).then(function (conditionResult) {
+            q.fcall(evaluateCondition, self.condition, executionContext, self.mapIn, self.mapOut).then(function (conditionResult) {
 
                 //TODO Check if the response is containing isTrue, otherwise, use the result directly (this is necessary to integrate with rule engine)
 
