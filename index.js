@@ -772,6 +772,24 @@
         return new this.messaging.ServiceResponse();
     };
 
+    function NoCompensationTaskNode(serviceMessage) {
+        TaskNode.call(this, serviceMessage);
+        this.name = 'NoCompensationTaskNode';
+        return this
+    }
+
+    util.inherits(NoCompensationTaskNode, TaskNode);
+
+    NoCompensationTaskNode.prototype.handleRequest = function (context) {
+
+        var response = new this.messaging.ServiceResponse();
+        response.isSuccess = context.isSuccess;
+        response.errors = context.errors;
+
+        return response;
+    };
+
+
     function NodeFactory() {
 
     }
@@ -1049,6 +1067,7 @@
     exports.IteratorNode = IteratorNode;
     exports.NoOpTaskNode = NoOpTaskNode;
     exports.ExecutionContext = ExecutionContext;
+    exports.NoCompensationTaskNode = NoCompensationTaskNode;
 
     Injector.setBasePath(__dirname);
     Injector
@@ -1059,6 +1078,7 @@
         .register({dependency: '/index::IteratorNode', name: 'IteratorNode'})
         .register({dependency: '/index::Processor', name: 'Processor'})
         .register({dependency: '/index::NoOpTaskNode', name: 'NoOpTaskNode'})
+        .register({dependency: '/index::NoCompensationTaskNode', name: 'NoCompensationTaskNode'})
         .register({dependency: '/index::ProcessorLoader', name: 'processorLoader'})
         .register({dependency: '/index::ProcessorResolver', name: 'processorResolver'})
 
