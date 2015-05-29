@@ -172,6 +172,12 @@
             this.contract = new contract.Contract(params.contract);
         }
 
+        this.initializeMap(params);
+
+    };
+
+    Node.prototype.initializeMap = function (params) {
+
         if (!_.isUndefined(params.mapIn)) {
             //let's rewrite the map for the in part.
             var newInMap = {};
@@ -191,8 +197,6 @@
         if (!_.isUndefined(params.mapOut)) {
             this.mapOut = params.mapOut;
         }
-
-
     };
 
     Node.prototype.execute = function (executionContext) {
@@ -348,6 +352,19 @@
     }
 
     util.inherits(ConditionNode, Node);
+
+    ConditionNode.prototype.initializeMap = function (params) {
+
+        if (!_.isUndefined(params.mapIn)) {
+
+            this.mapIn = params.mapIn;
+        }
+
+        if (!_.isUndefined(params.mapOut)) {
+            this.mapOut = params.mapOut;
+        }
+    };
+
 
     ConditionNode.prototype.initialize = function (params) {
         params = params || {};
@@ -514,6 +531,18 @@
     }
 
     util.inherits(LoopNode, Node);
+
+    LoopNode.prototype.initializeMap = function (params) {
+
+        if (!_.isUndefined(params.mapIn)) {
+
+            this.mapIn = params.mapIn;
+        }
+
+        if (!_.isUndefined(params.mapOut)) {
+            this.mapOut = params.mapOut;
+        }
+    };
 
     LoopNode.prototype.initialize = function (params) {
         params = params || {};
