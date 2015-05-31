@@ -1,6 +1,6 @@
 {
   "name": "jsai-jobprocessor",
-  "version": "0.0.29",
+  "version": "0.0.30",
   "description": "Job Processor and Task Framework",
   "author": {
     "name": "Jean-Sebastien Cote",
@@ -10,7 +10,7 @@
     "jsai-contract": "0.0.24",
     "jsai-injector": "0.0.3",
     "jsai-ruleengine": "0.0.8",
-    "jsai-servicemessage": "0.0.16",
+    "jsai-servicemessage": "0.0.17",
     "lodash": "^3.9.3",
     "object-mapper": "^1.0.0",
     "q": "^1.2.0"
