@@ -1041,6 +1041,8 @@
             processorName: this.processorName
         });
 
+        _executionContext = executionContext;
+
         if ((request instanceof this.messaging.ServiceMessage)) {
             if (request.correlationId != null) {
                 executionContext.correlationId = request.correlationId;
@@ -1083,6 +1085,12 @@
         });
 
         return dfd.promise;
+    };
+
+    var _executionContext = null;
+
+    Processor.getCurrentExecutionContext = function() {
+        return _executionContext;
     };
 
     exports.Processor = Processor;
