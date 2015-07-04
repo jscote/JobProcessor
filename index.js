@@ -179,19 +179,7 @@
     Node.prototype.initializeMap = function (params) {
 
         if (!_.isUndefined(params.mapIn)) {
-            //let's rewrite the map for the in part.
-            var newInMap = {};
-            for (var prop in params.mapIn) {
-                (function (property) {
-                    newInMap[property] = {
-                        key: params.mapIn[property], transform: function (value, objfrom, objTo) {
-                            objTo.set(params.mapIn[property], value);
-                            return objTo.getArgumentObject(params.mapIn[property]);
-                        }
-                    }
-                })(prop);
-            }
-            this.mapIn = newInMap;
+            this.mapIn = contract.Contract.createMap(params.mapIn);
         }
 
         if (!_.isUndefined(params.mapOut)) {
